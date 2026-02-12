@@ -17,8 +17,10 @@ const todoRoutes = require('./routes/todoRoutes');
 
 const app = express();
 
+// CORS ayarlarını en geniş haliyle bıraktık ki telefonun rahat bağlansın
 app.use(cors());
 app.use(express.json());
+
 app.use('/api/auth', authRoutes);
 app.use('/api/todos', todoRoutes);
 
@@ -33,8 +35,10 @@ app.get('/health', (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log('🚀 Server running on port' );
-  console.log('💾 Database: SQLite ()');
-  console.log('📝 Veriler kalıcı olarak kaydedilecek!^');
+// KRİTİK DEĞİŞİKLİK: '0.0.0.0' ekleyerek telefonunun bağlanmasını sağladık
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📡 Network URL: http://192.168.10.192:${PORT}`);
+  console.log('💾 Database: SQLite (database.sqlite)');
+  console.log('📝 Veriler kalıcı olarak kaydedilecek!');
 });

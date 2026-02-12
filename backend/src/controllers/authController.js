@@ -40,6 +40,7 @@ const register = async (req, res) => {
 };
 
 const login = async (req, res) => {
+  console.log("Giriş isteği geldi:", req.body); // Bunu ekle ki isteği görebilelim
   try {
     const { email, password } = req.body;
 

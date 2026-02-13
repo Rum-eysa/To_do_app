@@ -9,18 +9,23 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  
+  # 📱 MEVCUT PAKETLERİN (korundu)
   cupertino_icons: ^1.0.6
-  provider: ^6.1.1 # En güncel kararlı sürüm
+  provider: ^6.1.1
   http: ^1.1.0
   shared_preferences: ^2.2.2
   intl: ^0.18.1
   flutter_dotenv: ^5.1.0
-  flutter_local_notifications: ^17.0.0 # Daha kararlı sürüm (20.0 bazen beta uyuşmazlığı yapabilir)
+  flutter_local_notifications: ^17.2.4
   flutter_timezone: ^3.0.1
   
-  # --- EKSİK OLAN VE ÖNEMLİ PAKETLER ---
-  timezone: ^0.9.2          # Bildirimlerin zamanlanması (Reminder) için zorunlu
-  path_provider: ^2.1.1     # Dosya yolları yönetimi için
+  # 🆕 EKLENEN PAKETLER (sadece eksik olanlar)
+  timezone: ^0.9.4              # Bildirim zamanlaması için ZORUNLU
+  path_provider: ^2.1.1        # Bildirim ses dosyaları için
+  permission_handler: ^11.3.0  # Bildirim izinleri için
+  rxdart: ^0.27.7             # Bildirim akışları için
+  android_alarm_manager_plus: ^4.0.3
 
 dev_dependencies:
   flutter_test:
@@ -31,3 +36,5 @@ flutter:
   uses-material-design: true
   assets:
     - .env
+    # 🆕 BİLDİRİM SESLERİ İÇİN (opsiyonel)
+    # - assets/sounds/notification.mp3

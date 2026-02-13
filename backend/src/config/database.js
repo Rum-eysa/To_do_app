@@ -3,16 +3,21 @@
 const sequelize = new Sequelize({
   dialect: 'sqlite',
   storage: process.env.DB_STORAGE || './database.sqlite',
-  logging: false
+  logging: false,
+  define: {
+    // İsimlendirme hatalarını önlemek için:
+    underscored: false, 
+    timestamps: true
+  }
 });
 
 const connectDB = async () => {
   try {
     await sequelize.authenticate();
     console.log('✅ SQLite connected successfully');
-    console.log('📁 Database file:', process.env.DB_STORAGE || './database.sqlite');
     
-    await sequelize.sync({ alter: true });
+    // sync içindeki '+' silindi, yerine 'alter' geldi.
+    await sequelize.sync();
     console.log('✅ Database synchronized');
   } catch (error) {
     console.error('❌ SQLite connection error:', error);

@@ -5,10 +5,16 @@ import 'providers/auth_provider.dart';
 import 'providers/todo_provider.dart';
 import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load();
+
+  // Bildirim servisini uygulama açılmadan başlatıyoruz (KRİTİK ADIM)
+  final notificationService = NotificationService();
+  await notificationService.init();
+
   runApp(const MyApp());
 }
 
@@ -28,12 +34,12 @@ class MyApp extends StatelessWidget {
             title: 'Todo App',
             debugShowCheckedModeBanner: false,
             theme: ThemeData(
-              primarySwatch: Colors.blue, 
-              useMaterial3: true
+              colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+              useMaterial3: true,
             ),
-            home: authProvider.isAuthenticated 
-              ? const HomeScreen() 
-              : const AuthScreen(),
+            home: authProvider.isAuthenticated
+                ? const HomeScreen()
+                : const AuthScreen(),
           );
         },
       ),

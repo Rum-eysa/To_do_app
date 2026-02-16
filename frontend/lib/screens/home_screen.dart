@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../providers/todo_provider.dart';
 import '../widgets/todo_item.dart';
 import 'add_todo_screen.dart';
+import '../models/todo.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,9 +16,9 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   DateTime _selectedDate = DateTime.now();
-  // --- ARAMA İÇİN EKLENEN DEĞİŞKENLER ---
   String _searchQuery = "";
   bool _isSearching = false;
+  int _sortStatus = 0;
 
   @override
   void initState() {
@@ -32,13 +33,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
     final todoProvider = Provider.of<TodoProvider>(context);
 
-    // --- SADECE SÖYLEDİĞİN ŞEKİLDE GÜNCELLENEN FİLTRELEME ---
-    final filteredTodos = todoProvider.todos.where((todo) {
+    List<Todo> filteredTodos = todoProvider.todos.where((todo) {
       if (_isSearching && _searchQuery.isNotEmpty) {
-        // Arama yapılıyorsa: Sadece kelime eşleşmesine bak (tarihi boşver)
         return todo.title.toLowerCase().contains(_searchQuery.toLowerCase());
       } else {
-        // Arama yapılmıyorsa: Senin orijinal tarih filtren
         if (todo.dueDate == null) return false;
         return todo.dueDate!.year == _selectedDate.year &&
             todo.dueDate!.month == _selectedDate.month &&
@@ -46,10 +44,18 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }).toList();
 
+    final priorityWeight = {'high': 3, 'medium': 2, 'low': 1};
+    if (_sortStatus == 1) {
+      filteredTodos.sort((a, b) =>
+          priorityWeight[b.priority]!.compareTo(priorityWeight[a.priority]!));
+    } else if (_sortStatus == 2) {
+      filteredTodos.sort((a, b) =>
+          priorityWeight[a.priority]!.compareTo(priorityWeight[b.priority]!));
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        // --- ARAMA ÇUBUĞU EKLEMESİ ---
         title: _isSearching
             ? TextField(
                 autofocus: true,
@@ -62,13 +68,24 @@ class _HomeScreenState extends State<HomeScreen> {
             : const Text('My Todos',
                 style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
-          // --- ARAMA BUTONU ---
           IconButton(
             icon: Icon(_isSearching ? Icons.close : Icons.search),
             onPressed: () {
               setState(() {
                 _isSearching = !_isSearching;
                 if (!_isSearching) _searchQuery = "";
+              });
+            },
+          ),
+          IconButton(
+            icon: Icon(_sortStatus == 1
+                ? Icons.keyboard_double_arrow_down
+                : _sortStatus == 2
+                    ? Icons.keyboard_double_arrow_up
+                    : Icons.sort),
+            onPressed: () {
+              setState(() {
+                _sortStatus = (_sortStatus + 1) % 3;
               });
             },
           ),
@@ -109,7 +126,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: Column(
         children: [
-          // Arama yaparken takvimi gizlemek daha iyi bir deneyim sunar
           if (!_isSearching)
             Container(
               margin: const EdgeInsets.all(16),
@@ -150,36 +166,77 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
+
+          // --- 1. İSTATİSTİK KARTLARI EKLEMESİ ---
+          if (!_isSearching)
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Row(
+                children: [
+                  _buildStatCard("Total", filteredTodos.length, Colors.blue),
+                  const SizedBox(width: 12),
+                  _buildStatCard(
+                      "Done",
+                      filteredTodos.where((t) => t.completed).length,
+                      Colors.green),
+                  const SizedBox(width: 12),
+                  _buildStatCard(
+                      "Pending",
+                      filteredTodos.where((t) => !t.completed).length,
+                      Colors.orange),
+                ],
+              ),
+            ),
+
           if (!_isSearching) const Divider(indent: 20, endIndent: 20),
           Expanded(
             child: todoProvider.isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : filteredTodos.isEmpty
-                    ? _buildEmptyState(
-                        _isSearching) // Arama durumunu gönderiyoruz
+                    ? _buildEmptyState(_isSearching)
                     : ListView.builder(
                         padding: const EdgeInsets.all(16),
                         itemCount: filteredTodos.length,
                         itemBuilder: (context, index) {
                           final todo = filteredTodos[index];
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 8.0),
-                            child: InkWell(
-                              // --- TIKLAYINCA DÜZENLEME İÇİN NAVIGASYON ---
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) =>
-                                          AddTodoScreen(todo: todo)),
-                                );
-                              },
-                              child: TodoItem(
-                                todo: todo,
-                                onToggle: () =>
-                                    todoProvider.toggleTodo(todo.id),
-                                onDelete: () =>
-                                    todoProvider.deleteTodo(todo.id),
+
+                          // --- 2. SÜRÜKLE-SİL (DISMISSIBLE) EKLEMESİ ---
+                          return Dismissible(
+                            key: Key(todo.id),
+                            direction: DismissDirection.endToStart,
+                            background: Container(
+                              alignment: Alignment.centerRight,
+                              padding: const EdgeInsets.only(right: 20),
+                              margin: const EdgeInsets.only(bottom: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.redAccent,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child:
+                                  const Icon(Icons.delete, color: Colors.white),
+                            ),
+                            onDismissed: (direction) {
+                              todoProvider.deleteTodo(todo.id);
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 8.0),
+                              child: InkWell(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) =>
+                                            AddTodoScreen(todo: todo)),
+                                  );
+                                },
+                                child: TodoItem(
+                                  todo: todo,
+                                  onToggle: () =>
+                                      todoProvider.toggleTodo(todo.id),
+                                  onDelete: () =>
+                                      todoProvider.deleteTodo(todo.id),
+                                ),
                               ),
                             ),
                           );
@@ -201,7 +258,29 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- BOŞ DURUM MESAJINI ARAMAYA GÖRE GÜNCELLEDİK ---
+  // --- İSTATİSTİK KARTLARI İÇİN YARDIMCI WIDGET ---
+  Widget _buildStatCard(String label, int count, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: color.withOpacity(0.2)),
+        ),
+        child: Column(
+          children: [
+            Text(count.toString(),
+                style: TextStyle(
+                    fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+            Text(label,
+                style: TextStyle(fontSize: 12, color: color.withOpacity(0.8))),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildEmptyState(bool isSearching) {
     return Center(
       child: Column(

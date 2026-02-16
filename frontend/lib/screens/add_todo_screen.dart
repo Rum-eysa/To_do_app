@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/todo_provider.dart';
 import '../services/notification_service.dart';
+import 'package:weekly_date_picker/weekly_date_picker.dart';
 
 class AddTodoScreen extends StatefulWidget {
   const AddTodoScreen({super.key});
@@ -16,9 +17,8 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   String _selectedPriority = 'medium';
-  DateTime? _selectedDate;
+  DateTime? _selectedDate = DateTime.now();
   TimeOfDay? _selectedTime;
-  // EKLEME: İşlem sırasında butonu pasif yapmak için
   bool _isLoading = false;
 
   @override
@@ -31,13 +31,15 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
   Future<void> _selectDate() async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
+      initialDate:
+          _selectedDate ?? DateTime.now(), // Takvimden seçilen günden başlasın
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
     if (picked != null && mounted) {
       setState(() {
-        _selectedDate = picked;
+        _selectedDate =
+            picked; // Alttan seçilince üstteki WeeklyDatePicker da güncellenir
       });
     }
   }
@@ -65,6 +67,23 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
             key: _formKey,
             child: Column(
               children: [
+                Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100], // Hafif bir arka plan rengi
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: WeeklyDatePicker(
+                    selectedDay: _selectedDate ?? DateTime.now(),
+                    changeDay: (value) => setState(() {
+                      _selectedDate = value;
+                    }),
+                    selectedDigitBackgroundColor:
+                        Theme.of(context).primaryColor,
+                    digitsColor: Colors.black,
+                  ),
+                ),
                 TextFormField(
                   controller: _titleController,
                   decoration: const InputDecoration(
@@ -85,8 +104,7 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value:
-                      _selectedPriority, // Hata düzeltildi: initialValue yerine value kullanıldı.
+                  value: _selectedPriority,
                   decoration: const InputDecoration(
                       labelText: 'Priority', border: OutlineInputBorder()),
                   items: const [
@@ -132,17 +150,13 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
                   onPressed: _isLoading
                       ? null
                       : () async {
-                          // EKLEME: Yükleniyorsa butonu kapat
                           if (_formKey.currentState!.validate()) {
-                            setState(() => _isLoading = true); // İşlem başladı
+                            setState(() => _isLoading = true);
 
                             final todoProvider = Provider.of<TodoProvider>(
                                 context,
                                 listen: false);
-                            final title = _titleController.text;
-                            final desc = _descriptionController.text;
 
-                            // --- ÖNEMLİ: Tarih ve Saati Birleştir ---
                             DateTime? reminderDateTime;
                             if (_selectedDate != null &&
                                 _selectedTime != null) {
@@ -155,47 +169,46 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
                               );
                             }
 
-                            // 1. Görevi Backend'e Kaydet (Provider içinde JWT Token kullanılmalı)
+                            // JWT yetkilendirmesi ile backend'e gönderiyoruz.
                             final success = await todoProvider.addTodo(
-                              title,
-                              desc,
+                              _titleController.text,
+                              _descriptionController.text,
                               _selectedPriority,
-                              reminderDateTime, // Backend'e tarih nesnesi olarak gönderiyoruz
+                              reminderDateTime,
                             );
 
                             if (!mounted) return;
 
-                            // 2. Başarılıysa Bildirimi Planla
                             if (success && reminderDateTime != null) {
                               if (reminderDateTime.isAfter(DateTime.now())) {
                                 await NotificationService()
                                     .scheduleNotification(
-                                  title.hashCode, // Benzersiz ID
+                                  _titleController.text.hashCode,
                                   "Görev Hatırlatıcı 🔔",
-                                  title,
+                                  _titleController.text,
                                   reminderDateTime,
                                 );
                               }
                             }
 
-                            // 3. Ekranı kapat
                             if (success) {
-                              if (!mounted) return;
                               Navigator.pop(context);
                             } else {
-                              setState(() => _isLoading =
-                                  false); // Hata varsa butonu geri aç
+                              setState(() => _isLoading = false);
                               ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                      content: Text(
-                                          'Kayıt başarısız. Lütfen tekrar deneyin.')));
+                                      content: Text('Kayıt başarısız!')));
                             }
                           }
                         },
                   style: ElevatedButton.styleFrom(
                       minimumSize: const Size(double.infinity, 50)),
                   child: _isLoading
-                      ? const CircularProgressIndicator()
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
                       : const Text('Add Todo & Reminder'),
                 ),
               ],

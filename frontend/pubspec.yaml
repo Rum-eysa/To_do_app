@@ -19,6 +19,7 @@ dependencies:
   flutter_dotenv: ^5.1.0
   flutter_local_notifications: ^17.2.4
   flutter_timezone: ^3.0.1
+  weekly_date_picker: ^1.1.0
   
   # 🆕 EKLENEN PAKETLER (sadece eksik olanlar)
   timezone: ^0.9.4              # Bildirim zamanlaması için ZORUNLU

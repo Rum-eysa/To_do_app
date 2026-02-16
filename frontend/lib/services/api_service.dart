@@ -7,7 +7,7 @@ class ApiService {
   // 10.0.2.2 yerine bilgisayarının IP adresini yazmalısın (Örn: 192.168.1.35)
   // Eğer .env dosyasında API_URL tanımlıysa orayı da güncellemelisin.
   static final String _baseUrl = dotenv.env['API_URL'] ??
-      'http://192.168.10.192:5000/api'; // <--- BURAYI DEĞİŞTİR
+      'http://192.168.10.145:5000/api'; // <--- BURAYI DEĞİŞTİR
 
   Future<Map<String, String>> _getHeaders({bool authRequired = true}) async {
     final headers = {

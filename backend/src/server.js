@@ -37,7 +37,7 @@ const swaggerOptions = {
         description: 'Yerel Sunucu',
       },
       {
-        url: 'http://192.168.10.192:5000', // Senin ağ IP adresin
+        url: 'http://192.168.10.145:5000', // Senin ağ IP adresin
         description: 'Ağ Sunucusu (Telefon Erişimi)',
       },
     ],

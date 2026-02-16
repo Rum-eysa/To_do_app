@@ -3,10 +3,11 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/todo_provider.dart';
 import '../services/notification_service.dart';
-import 'package:weekly_date_picker/weekly_date_picker.dart';
+import '../models/todo.dart';
 
 class AddTodoScreen extends StatefulWidget {
-  const AddTodoScreen({super.key});
+  final Todo? todo;
+  const AddTodoScreen({super.key, this.todo});
 
   @override
   State<AddTodoScreen> createState() => _AddTodoScreenState();
@@ -14,12 +15,28 @@ class AddTodoScreen extends StatefulWidget {
 
 class _AddTodoScreenState extends State<AddTodoScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  String _selectedPriority = 'medium';
-  DateTime? _selectedDate = DateTime.now();
+  // --- KONTROLLERİ VE DEĞİŞKENLERİ INITSTATE İÇİN HAZIRLADIK ---
+  late TextEditingController _titleController;
+  late TextEditingController _descriptionController;
+  late String _selectedPriority;
+  DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // EĞER TODO VARSA ONUNLA, YOKSA BOŞ VERİLERLE BAŞLAT
+    _titleController = TextEditingController(text: widget.todo?.title ?? "");
+    _descriptionController =
+        TextEditingController(text: widget.todo?.description ?? "");
+    _selectedPriority = widget.todo?.priority ?? 'medium';
+    _selectedDate = widget.todo?.dueDate ?? DateTime.now();
+
+    if (widget.todo?.dueDate != null) {
+      _selectedTime = TimeOfDay.fromDateTime(widget.todo!.dueDate!);
+    }
+  }
 
   @override
   void dispose() {
@@ -31,15 +48,14 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
   Future<void> _selectDate() async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate:
-          _selectedDate ?? DateTime.now(), // Takvimden seçilen günden başlasın
-      firstDate: DateTime.now(),
+      initialDate: _selectedDate ?? DateTime.now(),
+      firstDate: DateTime.now().subtract(
+          const Duration(days: 365)), // Geçmiş tarihli düzenleme için esnetildi
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
     if (picked != null && mounted) {
       setState(() {
-        _selectedDate =
-            picked; // Alttan seçilince üstteki WeeklyDatePicker da güncellenir
+        _selectedDate = picked;
       });
     }
   }
@@ -47,7 +63,7 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
   Future<void> _selectTime() async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay.now(),
+      initialTime: _selectedTime ?? TimeOfDay.now(),
     );
     if (picked != null && mounted) {
       setState(() {
@@ -58,8 +74,11 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // MODU KONTROL ET
+    final isEditing = widget.todo != null;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Add New Todo')),
+      appBar: AppBar(title: Text(isEditing ? 'Edit Todo' : 'Add New Todo')),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -67,23 +86,6 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
             key: _formKey,
             child: Column(
               children: [
-                Container(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100], // Hafif bir arka plan rengi
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: WeeklyDatePicker(
-                    selectedDay: _selectedDate ?? DateTime.now(),
-                    changeDay: (value) => setState(() {
-                      _selectedDate = value;
-                    }),
-                    selectedDigitBackgroundColor:
-                        Theme.of(context).primaryColor,
-                    digitsColor: Colors.black,
-                  ),
-                ),
                 TextFormField(
                   controller: _titleController,
                   decoration: const InputDecoration(
@@ -169,13 +171,24 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
                               );
                             }
 
-                            // JWT yetkilendirmesi ile backend'e gönderiyoruz.
-                            final success = await todoProvider.addTodo(
-                              _titleController.text,
-                              _descriptionController.text,
-                              _selectedPriority,
-                              reminderDateTime,
-                            );
+                            // --- EKLEME VEYA GÜNCELLEME KARARI ---
+                            bool success;
+                            if (isEditing) {
+                              success = await todoProvider.updateTodo(
+                                widget.todo!.id,
+                                _titleController.text,
+                                _descriptionController.text,
+                                _selectedPriority,
+                                reminderDateTime,
+                              );
+                            } else {
+                              success = await todoProvider.addTodo(
+                                _titleController.text,
+                                _descriptionController.text,
+                                _selectedPriority,
+                                reminderDateTime,
+                              );
+                            }
 
                             if (!mounted) return;
 
@@ -197,7 +210,7 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
                               setState(() => _isLoading = false);
                               ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                      content: Text('Kayıt başarısız!')));
+                                      content: Text('İşlem başarısız!')));
                             }
                           }
                         },
@@ -209,7 +222,7 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
                           width: 20,
                           child: CircularProgressIndicator(
                               strokeWidth: 2, color: Colors.white))
-                      : const Text('Add Todo & Reminder'),
+                      : Text(isEditing ? 'Update Todo' : 'Add Todo & Reminder'),
                 ),
               ],
             ),

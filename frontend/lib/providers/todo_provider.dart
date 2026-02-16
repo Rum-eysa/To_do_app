@@ -9,12 +9,15 @@ class TodoProvider with ChangeNotifier {
 
   List<Todo> get todos {
     switch (_filter) {
-      case 'active': return _todos.where((todo) => !todo.completed).toList();
-      case 'completed': return _todos.where((todo) => todo.completed).toList();
-      default: return _todos;
+      case 'active':
+        return _todos.where((todo) => !todo.completed).toList();
+      case 'completed':
+        return _todos.where((todo) => todo.completed).toList();
+      default:
+        return _todos;
     }
   }
-  
+
   bool get isLoading => _isLoading;
   String get filter => _filter;
 
@@ -31,10 +34,11 @@ class TodoProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> addTodo(String title, String description, String priority, DateTime? dueDate) async {
+  Future<bool> addTodo(String title, String description, String priority,
+      DateTime? dueDate) async {
     final todoData = await _apiService.createTodo({
-      'title': title, 
-      'description': description, 
+      'title': title,
+      'description': description,
       'priority': priority,
       if (dueDate != null) 'dueDate': dueDate.toIso8601String(),
     });
@@ -42,6 +46,27 @@ class TodoProvider with ChangeNotifier {
       _todos.insert(0, Todo.fromJson(todoData));
       notifyListeners();
       return true;
+    }
+    return false;
+  }
+
+  // --- SADECE BU METOD EKLENDİ ---
+  Future<bool> updateTodo(String id, String title, String description,
+      String priority, DateTime? dueDate) async {
+    final todoData = await _apiService.updateTodo(id, {
+      'title': title,
+      'description': description,
+      'priority': priority,
+      if (dueDate != null) 'dueDate': dueDate.toIso8601String(),
+    });
+
+    if (todoData != null) {
+      final index = _todos.indexWhere((todo) => todo.id == id);
+      if (index != -1) {
+        _todos[index] = Todo.fromJson(todoData);
+        notifyListeners();
+        return true;
+      }
     }
     return false;
   }
@@ -69,6 +94,10 @@ class TodoProvider with ChangeNotifier {
     return false;
   }
 
-  void setFilter(String filter) { _filter = filter; notifyListeners(); }
+  void setFilter(String filter) {
+    _filter = filter;
+    notifyListeners();
+  }
+
   int get activeTodoCount => _todos.where((todo) => !todo.completed).length;
 }

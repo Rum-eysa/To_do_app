@@ -1,4 +1,4 @@
-# 📝 Todo App (Modern Task Manager)
+# 📝 Todo App
 
 Minimalist tasarımı ve güçlü özellikleriyle günlük görevlerinizi yönetmek için geliştirilmiş bir Flutter uygulamasıdır.
 

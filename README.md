@@ -34,6 +34,7 @@ Uygulamayı çalıştırın:
 Bash
 flutter run
 📂 Dosya Yapısı
+
 lib/models: Veri modelleri.
 
 lib/providers: Uygulama mantığı.

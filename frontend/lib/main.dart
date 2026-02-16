@@ -11,7 +11,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load();
 
-  // Bildirim servisini uygulama açılmadan başlatıyoruz (KRİTİK ADIM)
+  // Bildirim servisini uygulama açılmadan başlatıyoruz
   final notificationService = NotificationService();
   await notificationService.init();
 
@@ -37,9 +37,25 @@ class MyApp extends StatelessWidget {
               colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
               useMaterial3: true,
             ),
+            // --- OTOMATİK GİRİŞ MANTIĞI BURADA BAŞLIYOR ---
             home: authProvider.isAuthenticated
                 ? const HomeScreen()
-                : const AuthScreen(),
+                : FutureBuilder(
+                    future: authProvider.tryAutoLogin(),
+                    builder: (context, snapshot) {
+                      // Eğer hala hafızadan veri okumaya çalışıyorsa yükleme göster
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Scaffold(
+                          body: Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
+                      }
+                      // Okuma bittiğinde veri yoksa AuthScreen'e yönlendir
+                      return const AuthScreen();
+                    },
+                  ),
+            // --- OTOMATİK GİRİŞ MANTIĞI BURADA BİTİYOR ---
           );
         },
       ),

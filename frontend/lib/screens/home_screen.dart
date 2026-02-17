@@ -33,6 +33,12 @@ class _HomeScreenState extends State<HomeScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
     final todoProvider = Provider.of<TodoProvider>(context);
 
+    // --- EKLEME: GEÇMİŞ TARİH KONTROLÜ ---
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    // Seçilen gün bugünden öncesi mi?
+    final isPastDate = _selectedDate.isBefore(today);
+
     List<Todo> filteredTodos = todoProvider.todos.where((todo) {
       if (_isSearching && _searchQuery.isNotEmpty) {
         return todo.title.toLowerCase().contains(_searchQuery.toLowerCase());
@@ -166,8 +172,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-
-          // --- 1. İSTATİSTİK KARTLARI EKLEMESİ ---
           if (!_isSearching)
             Padding(
               padding:
@@ -188,7 +192,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-
           if (!_isSearching) const Divider(indent: 20, endIndent: 20),
           Expanded(
             child: todoProvider.isLoading
@@ -200,8 +203,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         itemCount: filteredTodos.length,
                         itemBuilder: (context, index) {
                           final todo = filteredTodos[index];
-
-                          // --- 2. SÜRÜKLE-SİL (DISMISSIBLE) EKLEMESİ ---
                           return Dismissible(
                             key: Key(todo.id),
                             direction: DismissDirection.endToStart,
@@ -245,20 +246,24 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const AddTodoScreen()),
-          );
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Add Todo'),
-      ),
+      // --- GÜNCELLEME: BUTONU ŞARTLI GÖSTERME ---
+      // Eğer geçmiş bir tarih seçilmişse buton null olur ve ekrandan kaybolur.
+      floatingActionButton: isPastDate
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const AddTodoScreen()),
+                );
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Add Todo'),
+            ),
     );
   }
 
-  // --- İSTATİSTİK KARTLARI İÇİN YARDIMCI WIDGET ---
   Widget _buildStatCard(String label, int count, Color color) {
     return Expanded(
       child: Container(

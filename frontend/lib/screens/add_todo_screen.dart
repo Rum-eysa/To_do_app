@@ -15,7 +15,6 @@ class AddTodoScreen extends StatefulWidget {
 
 class _AddTodoScreenState extends State<AddTodoScreen> {
   final _formKey = GlobalKey<FormState>();
-  // --- KONTROLLERİ VE DEĞİŞKENLERİ INITSTATE İÇİN HAZIRLADIK ---
   late TextEditingController _titleController;
   late TextEditingController _descriptionController;
   late String _selectedPriority;
@@ -26,7 +25,6 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
   @override
   void initState() {
     super.initState();
-    // EĞER TODO VARSA ONUNLA, YOKSA BOŞ VERİLERLE BAŞLAT
     _titleController = TextEditingController(text: widget.todo?.title ?? "");
     _descriptionController =
         TextEditingController(text: widget.todo?.description ?? "");
@@ -46,13 +44,24 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
   }
 
   Future<void> _selectDate() async {
+    final DateTime now = DateTime.now();
+    // Saat, dakika ve saniye farklarından dolayı hata almamak için
+    // bugünün tarihini sadece yıl, ay, gün olarak normalize ediyoruz.
+    final DateTime today = DateTime(now.year, now.month, now.day);
+
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate ?? DateTime.now(),
-      firstDate: DateTime.now().subtract(
-          const Duration(days: 365)), // Geçmiş tarihli düzenleme için esnetildi
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      // Eğer mevcut seçili tarih bugün veya sonrasındaysa onu kullan,
+      // değilse (eski bir görev düzenleniyorsa) bugünü göster.
+      initialDate: (_selectedDate != null && _selectedDate!.isAfter(today))
+          ? _selectedDate!
+          : today,
+      // Seçilebilecek en eski tarihi bugün olarak belirliyoruz:
+      firstDate: today,
+      // Gelecek 1 yıl için seçim yapılabilir:
+      lastDate: today.add(const Duration(days: 365)),
     );
+
     if (picked != null && mounted) {
       setState(() {
         _selectedDate = picked;
@@ -74,7 +83,6 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // MODU KONTROL ET
     final isEditing = widget.todo != null;
 
     return Scaffold(
@@ -171,7 +179,6 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
                               );
                             }
 
-                            // --- EKLEME VEYA GÜNCELLEME KARARI ---
                             bool success;
                             if (isEditing) {
                               success = await todoProvider.updateTodo(
@@ -208,9 +215,31 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
                               Navigator.pop(context);
                             } else {
                               setState(() => _isLoading = false);
+
+                              // --- EKLEME: GEÇMİŞ TARİH VE HATA KONTROLÜ ---
+                              final now = DateTime.now();
+                              final today =
+                                  DateTime(now.year, now.month, now.day);
+                              final selectedDateOnly = _selectedDate != null
+                                  ? DateTime(_selectedDate!.year,
+                                      _selectedDate!.month, _selectedDate!.day)
+                                  : null;
+
+                              String errorMessage = 'İşlem başarısız!';
+
+                              if (selectedDateOnly != null &&
+                                  selectedDateOnly.isBefore(today)) {
+                                errorMessage =
+                                    'Geçmiş bir tarihe görev ekleyemezsiniz! 🛑';
+                              }
+
                               ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content: Text('İşlem başarısız!')));
+                                SnackBar(
+                                  content: Text(errorMessage),
+                                  backgroundColor: Colors.redAccent,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
                             }
                           }
                         },

@@ -33,10 +33,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
     final todoProvider = Provider.of<TodoProvider>(context);
 
-    // --- EKLEME: GEÇMİŞ TARİH KONTROLÜ ---
+    // --- GEÇMİŞ TARİH KONTROLÜ ---
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    // Seçilen gün bugünden öncesi mi?
     final isPastDate = _selectedDate.isBefore(today);
 
     List<Todo> filteredTodos = todoProvider.todos.where((todo) {
@@ -203,9 +202,40 @@ class _HomeScreenState extends State<HomeScreen> {
                         itemCount: filteredTodos.length,
                         itemBuilder: (context, index) {
                           final todo = filteredTodos[index];
+
                           return Dismissible(
                             key: Key(todo.id),
                             direction: DismissDirection.endToStart,
+                            // --- GÜVENLİK: KAYDIRMA İLE SİLMEYİ ONAYLA ---
+                            confirmDismiss: (direction) async {
+                              return await showDialog(
+                                context: context,
+                                builder: (BuildContext context) {
+                                  return AlertDialog(
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(15)),
+                                    title: const Text("Görevi Sil"),
+                                    content: const Text(
+                                        "Bu görevi silmek istediğinizden emin misiniz?"),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.of(context).pop(false),
+                                        child: const Text("İPTAL"),
+                                      ),
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.of(context).pop(true),
+                                        style: TextButton.styleFrom(
+                                            foregroundColor: Colors.redAccent),
+                                        child: const Text("SİL"),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+                            },
                             background: Container(
                               alignment: Alignment.centerRight,
                               padding: const EdgeInsets.only(right: 20),
@@ -235,8 +265,30 @@ class _HomeScreenState extends State<HomeScreen> {
                                   todo: todo,
                                   onToggle: () =>
                                       todoProvider.toggleTodo(todo.id),
-                                  onDelete: () =>
-                                      todoProvider.deleteTodo(todo.id),
+                                  // --- GÜVENLİK: İKONA TIKLANDIĞINDA ONAYLA ---
+                                  onDelete: () async {
+                                    final confirm = await showDialog<bool>(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text("Sil"),
+                                        content: const Text(
+                                            "Bu görevi silmek istiyor musunuz?"),
+                                        actions: [
+                                          TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(context, false),
+                                              child: const Text("HAYIR")),
+                                          TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(context, true),
+                                              child: const Text("EVET")),
+                                        ],
+                                      ),
+                                    );
+                                    if (confirm == true) {
+                                      todoProvider.deleteTodo(todo.id);
+                                    }
+                                  },
                                 ),
                               ),
                             ),
@@ -246,8 +298,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      // --- GÜNCELLEME: BUTONU ŞARTLI GÖSTERME ---
-      // Eğer geçmiş bir tarih seçilmişse buton null olur ve ekrandan kaybolur.
       floatingActionButton: isPastDate
           ? null
           : FloatingActionButton.extended(

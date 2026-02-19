@@ -7,7 +7,9 @@ import '../models/todo.dart';
 
 class AddTodoScreen extends StatefulWidget {
   final Todo? todo;
-  const AddTodoScreen({super.key, this.todo});
+  final DateTime? initialDate;
+
+  const AddTodoScreen({super.key, this.todo, this.initialDate});
 
   @override
   State<AddTodoScreen> createState() => _AddTodoScreenState();
@@ -35,7 +37,8 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
     // --- KRİTİK NOKTA ---
     // Eğer düzenleme yapıyorsak todonun tarihini, yeni ekliyorsak ŞU ANKİ tarihi alıyoruz.
     // Böylece veritabanına asla null gitmez.
-    _selectedDate = widget.todo?.dueDate ?? DateTime.now();
+    _selectedDate =
+        widget.todo?.dueDate ?? widget.initialDate ?? DateTime.now();
 
     // Saat kısmı için de aynı mantık: ya var olan saat ya da şu anki saat.
     if (widget.todo?.dueDate != null) {

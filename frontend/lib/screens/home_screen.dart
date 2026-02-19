@@ -133,8 +133,8 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           if (!_isSearching)
             Container(
-              margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              margin: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+              padding: const EdgeInsets.symmetric(vertical: 4),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
@@ -154,23 +154,37 @@ class _HomeScreenState extends State<HomeScreen> {
                   });
                 },
                 headerProps: const EasyHeaderProps(
+                  // --- DÜZELTME 1: Başlığın altındaki boşluğu sıfırladık ---
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 0),
                   monthPickerType: MonthPickerType.switcher,
                   dateFormatter: DateFormatter.fullDateMonthAsStrDY(),
                 ),
                 dayProps: EasyDayProps(
+                  // --- DÜZELTME 2: Gün kutularını dikeyde iyice daralttık ---
+                  height: 65.0,
+                  width: 58.0,
                   dayStructure: DayStructure.dayStrDayNum,
                   activeDayStyle: DayStyle(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
                       color: Theme.of(context).primaryColor,
                     ),
+                    // Sayıları biraz küçültüp yukarı çektik
                     dayNumStyle: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold),
-                    dayStrStyle: const TextStyle(color: Colors.white),
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15),
+                    dayStrStyle:
+                        const TextStyle(color: Colors.white, fontSize: 11),
+                  ),
+                  inactiveDayStyle: const DayStyle(
+                    dayNumStyle: TextStyle(fontSize: 15),
+                    dayStrStyle: TextStyle(fontSize: 11),
                   ),
                 ),
               ),
             ),
+          // --- RAPOR KISMI (Buraya hiç dokunmadan orijinal formata sadık kalıyoruz) ---
           if (!_isSearching)
             Padding(
               padding:

@@ -45,20 +45,14 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
 
   Future<void> _selectDate() async {
     final DateTime now = DateTime.now();
-    // Saat, dakika ve saniye farklarından dolayı hata almamak için
-    // bugünün tarihini sadece yıl, ay, gün olarak normalize ediyoruz.
     final DateTime today = DateTime(now.year, now.month, now.day);
 
     final DateTime? picked = await showDatePicker(
       context: context,
-      // Eğer mevcut seçili tarih bugün veya sonrasındaysa onu kullan,
-      // değilse (eski bir görev düzenleniyorsa) bugünü göster.
       initialDate: (_selectedDate != null && _selectedDate!.isAfter(today))
           ? _selectedDate!
           : today,
-      // Seçilebilecek en eski tarihi bugün olarak belirliyoruz:
       firstDate: today,
-      // Gelecek 1 yıl için seçim yapılabilir:
       lastDate: today.add(const Duration(days: 365)),
     );
 

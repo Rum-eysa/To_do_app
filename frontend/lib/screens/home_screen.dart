@@ -33,7 +33,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
     final todoProvider = Provider.of<TodoProvider>(context);
 
-    // --- GEÇMİŞ TARİH KONTROLÜ ---
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final isPastDate = _selectedDate.isBefore(today);
@@ -154,13 +153,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   });
                 },
                 headerProps: const EasyHeaderProps(
-                  // --- DÜZELTME 1: Başlığın altındaki boşluğu sıfırladık ---
                   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 0),
                   monthPickerType: MonthPickerType.switcher,
                   dateFormatter: DateFormatter.fullDateMonthAsStrDY(),
                 ),
                 dayProps: EasyDayProps(
-                  // --- DÜZELTME 2: Gün kutularını dikeyde iyice daralttık ---
                   height: 65.0,
                   width: 58.0,
                   dayStructure: DayStructure.dayStrDayNum,
@@ -169,7 +166,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       borderRadius: BorderRadius.circular(12),
                       color: Theme.of(context).primaryColor,
                     ),
-                    // Sayıları biraz küçültüp yukarı çektik
                     dayNumStyle: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -184,7 +180,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-          // --- RAPOR KISMI (Buraya hiç dokunmadan orijinal formata sadık kalıyoruz) ---
           if (!_isSearching)
             Padding(
               padding:
@@ -220,7 +215,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           return Dismissible(
                             key: Key(todo.id),
                             direction: DismissDirection.endToStart,
-                            // --- GÜVENLİK: KAYDIRMA İLE SİLMEYİ ONAYLA ---
                             confirmDismiss: (direction) async {
                               return await showDialog(
                                 context: context,
@@ -279,7 +273,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                   todo: todo,
                                   onToggle: () =>
                                       todoProvider.toggleTodo(todo.id),
-                                  // --- GÜVENLİK: İKONA TIKLANDIĞINDA ONAYLA ---
                                   onDelete: () async {
                                     final confirm = await showDialog<bool>(
                                       context: context,
@@ -319,7 +312,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) => const AddTodoScreen()),
+                    builder: (context) => AddTodoScreen(
+                      initialDate: _selectedDate,
+                    ),
+                  ),
                 );
               },
               icon: const Icon(Icons.add),

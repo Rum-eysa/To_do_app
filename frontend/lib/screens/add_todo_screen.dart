@@ -25,14 +25,23 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
   @override
   void initState() {
     super.initState();
+    // Controller'ları mevcut veriyle veya boş olarak başlatıyoruz
     _titleController = TextEditingController(text: widget.todo?.title ?? "");
     _descriptionController =
         TextEditingController(text: widget.todo?.description ?? "");
+
     _selectedPriority = widget.todo?.priority ?? 'medium';
+
+    // --- KRİTİK NOKTA ---
+    // Eğer düzenleme yapıyorsak todonun tarihini, yeni ekliyorsak ŞU ANKİ tarihi alıyoruz.
+    // Böylece veritabanına asla null gitmez.
     _selectedDate = widget.todo?.dueDate ?? DateTime.now();
 
+    // Saat kısmı için de aynı mantık: ya var olan saat ya da şu anki saat.
     if (widget.todo?.dueDate != null) {
       _selectedTime = TimeOfDay.fromDateTime(widget.todo!.dueDate!);
+    } else {
+      _selectedTime = TimeOfDay.now();
     }
   }
 
@@ -151,6 +160,7 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
+                  // --- ELEVATED BUTTON İÇİNDE BUL VE DEĞİŞTİR ---
                   onPressed: _isLoading
                       ? null
                       : () async {
@@ -161,17 +171,22 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
                                 context,
                                 listen: false);
 
-                            DateTime? reminderDateTime;
-                            if (_selectedDate != null &&
-                                _selectedTime != null) {
-                              reminderDateTime = DateTime(
-                                _selectedDate!.year,
-                                _selectedDate!.month,
-                                _selectedDate!.day,
-                                _selectedTime!.hour,
-                                _selectedTime!.minute,
-                              );
-                            }
+                            // --- DÜZELTME BURADA ---
+                            // Eğer saat seçilmemişse, tarih olarak seçili günü, saat olarak ise şu anki saati alıyoruz.
+                            // Böylece reminderDateTime asla null olmaz.
+                            DateTime reminderDateTime;
+
+                            final dateToUse = _selectedDate ?? DateTime.now();
+                            final timeToUse = _selectedTime ?? TimeOfDay.now();
+
+                            reminderDateTime = DateTime(
+                              dateToUse.year,
+                              dateToUse.month,
+                              dateToUse.day,
+                              timeToUse.hour,
+                              timeToUse.minute,
+                            );
+                            // -----------------------
 
                             bool success;
                             if (isEditing) {
@@ -180,31 +195,17 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
                                 _titleController.text,
                                 _descriptionController.text,
                                 _selectedPriority,
-                                reminderDateTime,
+                                reminderDateTime, // Artık null gitme ihtimali yok
                               );
                             } else {
                               success = await todoProvider.addTodo(
                                 _titleController.text,
                                 _descriptionController.text,
                                 _selectedPriority,
-                                reminderDateTime,
+                                reminderDateTime, // Artık null gitme ihtimali yok
                               );
                             }
-
-                            if (!mounted) return;
-
-                            if (success && reminderDateTime != null) {
-                              if (reminderDateTime.isAfter(DateTime.now())) {
-                                await NotificationService()
-                                    .scheduleNotification(
-                                  _titleController.text.hashCode,
-                                  "Görev Hatırlatıcı 🔔",
-                                  _titleController.text,
-                                  reminderDateTime,
-                                );
-                              }
-                            }
-
+// ... geri kalan kısımlar aynı
                             if (success) {
                               Navigator.pop(context);
                             } else {

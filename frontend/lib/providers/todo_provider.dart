@@ -28,7 +28,8 @@ class TodoProvider with ChangeNotifier {
     notifyListeners();
     final todosData = await _apiService.getTodos();
     if (todosData != null) {
-      _todos = todosData.map((todo) => Todo.fromJson(todo)).toList();
+      // ÇÖZÜM: fromJson yerine fromMap kullanıyoruz
+      _todos = todosData.map((todo) => Todo.fromMap(todo)).toList();
     }
     _isLoading = false;
     notifyListeners();
@@ -36,47 +37,48 @@ class TodoProvider with ChangeNotifier {
 
   Future<bool> addTodo(String title, String description, String priority,
       DateTime? dueDate) async {
-    // --- YENİ EKLEME: GEÇMİŞ TARİH KONTROLÜ ---
     if (dueDate != null) {
       final now = DateTime.now();
-      // Sadece tarihleri karşılaştırmak için saatleri sıfırlıyoruz
       final today = DateTime(now.year, now.month, now.day);
       final selectedDate = DateTime(dueDate.year, dueDate.month, dueDate.day);
 
       if (selectedDate.isBefore(today)) {
-        // Eğer seçilen tarih bugünden önceyse işlemi durdur
         return false;
       }
     }
-    // -----------------------------------------
+
     final todoData = await _apiService.createTodo({
       'title': title,
       'description': description,
       'priority': priority,
+      'createdAt': DateTime.now().toIso8601String(), // Hibrit yapı için ekledik
       if (dueDate != null) 'dueDate': dueDate.toIso8601String(),
     });
+
     if (todoData != null) {
-      _todos.insert(0, Todo.fromJson(todoData));
+      // ÇÖZÜM: fromJson yerine fromMap kullanıyoruz
+      _todos.insert(0, Todo.fromMap(todoData));
       notifyListeners();
       return true;
     }
     return false;
   }
 
-  // --- SADECE BU METOD EKLENDİ ---
   Future<bool> updateTodo(String id, String title, String description,
       String priority, DateTime? dueDate) async {
     final todoData = await _apiService.updateTodo(id, {
       'title': title,
       'description': description,
       'priority': priority,
+      'updatedAt': DateTime.now().toIso8601String(), // Güncelleme zamanı
       if (dueDate != null) 'dueDate': dueDate.toIso8601String(),
     });
 
     if (todoData != null) {
       final index = _todos.indexWhere((todo) => todo.id == id);
       if (index != -1) {
-        _todos[index] = Todo.fromJson(todoData);
+        // ÇÖZÜM: fromJson yerine fromMap kullanıyoruz
+        _todos[index] = Todo.fromMap(todoData);
         notifyListeners();
         return true;
       }

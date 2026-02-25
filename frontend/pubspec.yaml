@@ -9,34 +9,36 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  easy_date_timeline: 1.0.3
-  
-  # 📱 MEVCUT PAKETLERİN (korundu)
+  easy_date_timeline: ^2.0.9
+  firebase_core: ^4.4.0
+  firebase_auth: ^6.1.4
+  cloud_firestore: ^6.1.2
   cupertino_icons: ^1.0.6
   provider: ^6.1.1
   http: ^1.1.0
   shared_preferences: ^2.5.4
-  intl: ^0.18.1
-  flutter_dotenv: ^5.1.0
-  flutter_local_notifications: ^17.2.4
-  flutter_timezone: ^3.0.1
+  intl: ^0.20.2
+  flutter_dotenv: ^6.0.0
+  flutter_local_notifications: ^16.1.0
+  flutter_timezone: ^5.0.1
   weekly_date_picker: ^1.1.0
-  
-  # 🆕 EKLENEN PAKETLER (sadece eksik olanlar)
-  timezone: ^0.9.4              # Bildirim zamanlaması için ZORUNLU
-  path_provider: ^2.1.1        # Bildirim ses dosyaları için
-  permission_handler: ^11.3.0  # Bildirim izinleri için
-  rxdart: ^0.27.7             # Bildirim akışları için
-  android_alarm_manager_plus: ^4.0.3
+  timezone: ^0.9.2
+  path_provider: ^2.1.1
+  permission_handler: ^12.0.1
+  android_alarm_manager_plus: ^5.0.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.1
+  flutter_lints: ^6.0.0
 
 flutter:
   uses-material-design: true
   assets:
     - .env
-    # 🆕 BİLDİRİM SESLERİ İÇİN (opsiyonel)
-    # - assets/sounds/notification.mp3
+
+dependency_overrides:
+  collection: 1.18.0  # Başına ^ koyma, tam olarak bu sürümü zorla
+  http_parser: 4.0.0  # Sabit sürüm kullanarak uyuşmazlığı engelle
+  intl: ^0.19.0
+  http: ^1.1.0

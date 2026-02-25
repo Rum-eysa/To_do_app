@@ -24,23 +24,21 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
   TimeOfDay? _selectedTime;
   bool _isLoading = false;
 
+  // EKLEME: Kullanıcının hatırlatıcı isteyip istemediğini kontrol eder
+  bool _setReminder = true;
+
   @override
   void initState() {
     super.initState();
-    // Controller'ları mevcut veriyle veya boş olarak başlatıyoruz
     _titleController = TextEditingController(text: widget.todo?.title ?? "");
     _descriptionController =
         TextEditingController(text: widget.todo?.description ?? "");
 
     _selectedPriority = widget.todo?.priority ?? 'medium';
 
-    // --- KRİTİK NOKTA ---
-    // Eğer düzenleme yapıyorsak todonun tarihini, yeni ekliyorsak ŞU ANKİ tarihi alıyoruz.
-    // Böylece veritabanına asla null gitmez.
     _selectedDate =
         widget.todo?.dueDate ?? widget.initialDate ?? DateTime.now();
 
-    // Saat kısmı için de aynı mantık: ya var olan saat ya da şu anki saat.
     if (widget.todo?.dueDate != null) {
       _selectedTime = TimeOfDay.fromDateTime(widget.todo!.dueDate!);
     } else {
@@ -161,9 +159,19 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
                         : _selectedTime!.format(context)),
                   ),
                 ),
+
+                // EKLEME: Hatırlatıcı Açma/Kapama Switch'i
+                SwitchListTile(
+                  title: const Text("Set Notification Alarm"),
+                  subtitle: const Text("Receive a reminder at selected time"),
+                  value: _setReminder,
+                  onChanged: (val) => setState(() => _setReminder = val),
+                  secondary: const Icon(Icons.notifications_active,
+                      color: Colors.amber),
+                ),
+
                 const SizedBox(height: 24),
                 ElevatedButton(
-                  // --- ELEVATED BUTTON İÇİNDE BUL VE DEĞİŞTİR ---
                   onPressed: _isLoading
                       ? null
                       : () async {
@@ -174,22 +182,16 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
                                 context,
                                 listen: false);
 
-                            // --- DÜZELTME BURADA ---
-                            // Eğer saat seçilmemişse, tarih olarak seçili günü, saat olarak ise şu anki saati alıyoruz.
-                            // Böylece reminderDateTime asla null olmaz.
-                            DateTime reminderDateTime;
-
+                            // Tarih ve saat birleştiriliyor
                             final dateToUse = _selectedDate ?? DateTime.now();
                             final timeToUse = _selectedTime ?? TimeOfDay.now();
-
-                            reminderDateTime = DateTime(
+                            final reminderDateTime = DateTime(
                               dateToUse.year,
                               dateToUse.month,
                               dateToUse.day,
                               timeToUse.hour,
                               timeToUse.minute,
                             );
-                            // -----------------------
 
                             bool success;
                             if (isEditing) {
@@ -198,23 +200,36 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
                                 _titleController.text,
                                 _descriptionController.text,
                                 _selectedPriority,
-                                reminderDateTime, // Artık null gitme ihtimali yok
+                                reminderDateTime,
                               );
                             } else {
                               success = await todoProvider.addTodo(
                                 _titleController.text,
                                 _descriptionController.text,
                                 _selectedPriority,
-                                reminderDateTime, // Artık null gitme ihtimali yok
+                                reminderDateTime,
                               );
                             }
-// ... geri kalan kısımlar aynı
+
                             if (success) {
-                              Navigator.pop(context);
+                              // EKLEME: Eğer hatırlatıcı açıksa bildirimi kur
+                              if (_setReminder) {
+                                await NotificationService.scheduleNotification(
+                                  // Statik çağrı
+                                  id: widget.todo?.id.hashCode ??
+                                      DateTime.now().millisecond,
+                                  title: "🔔 Görev: ${_titleController.text}",
+                                  body: _descriptionController.text.isNotEmpty
+                                      ? _descriptionController.text
+                                      : "Görev vakti geldi!",
+                                  scheduledDate:
+                                      reminderDateTime, // Parametre isimlerine dikkat!
+                                );
+                              }
+                              if (mounted) Navigator.pop(context);
                             } else {
                               setState(() => _isLoading = false);
 
-                              // --- EKLEME: GEÇMİŞ TARİH VE HATA KONTROLÜ ---
                               final now = DateTime.now();
                               final today =
                                   DateTime(now.year, now.month, now.day);

@@ -1,8 +1,8 @@
 ﻿import 'package:flutter/material.dart';
-import 'dart:convert'; // JSON işlemleri için gerekli
+import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import '../models/user.dart';
-import '../services/api_service.dart';
 
 class AuthProvider with ChangeNotifier {
   User? _currentUser;
@@ -14,68 +14,76 @@ class AuthProvider with ChangeNotifier {
   String? get error => _error;
   bool get isAuthenticated => _currentUser != null;
 
-  final ApiService _apiService = ApiService();
+  // Sürdürülebilir JWT Akışı [cite: 2026-02-11]
+  Stream<fb_auth.User?> get userStatusStream =>
+      fb_auth.FirebaseAuth.instance.authStateChanges();
 
-  // --- YENİ: OTOMATİK GİRİŞ KONTROLÜ ---
-  Future<void> tryAutoLogin() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (!prefs.containsKey('user_data')) return;
+  Future<bool> login(String email, String password) async {
+    _setLoading(true);
+    _clearError();
+    try {
+      final userCredential = await fb_auth.FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: email, password: password);
 
-    final String? savedData = prefs.getString('user_data');
-    if (savedData != null) {
-      _currentUser = User.fromJson(json.decode(savedData));
-      notifyListeners();
+      // JWT Alımı [cite: 2026-02-11]
+      final String? jwtToken = await userCredential.user?.getIdToken();
+
+      if (userCredential.user != null) {
+        _currentUser = User(
+          id: userCredential.user!.uid,
+          email: userCredential.user!.email ?? "",
+          username: userCredential.user!.displayName ?? "Kullanıcı",
+        );
+
+        await _saveUserToLocal({
+          'id': _currentUser!.id,
+          'email': _currentUser!.email,
+          'token': jwtToken, // JWT saklanıyor [cite: 2026-02-11]
+        });
+
+        _setLoading(false);
+        return true;
+      }
+    } catch (e) {
+      _error = e.toString();
     }
+    _setLoading(false);
+    return false;
   }
 
   Future<bool> register(String username, String email, String password) async {
     _setLoading(true);
     _clearError();
-    final userData = await _apiService.register(username, email, password);
-    if (userData != null) {
-      _currentUser = User.fromJson(userData);
+    try {
+      final userCredential = await fb_auth.FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: password);
 
-      // Kayıt başarılıysa veriyi hafızaya kaydet
-      await _saveUserToLocal(userData);
+      await userCredential.user?.updateDisplayName(username);
 
-      _setLoading(false);
-      return true;
+      if (userCredential.user != null) {
+        _currentUser = User(
+          id: userCredential.user!.uid,
+          email: email,
+          username: username,
+        );
+        _setLoading(false);
+        return true;
+      }
+    } catch (e) {
+      _error = e.toString();
     }
-    _error = 'Registration failed';
-    _setLoading(false);
-    return false;
-  }
-
-  Future<bool> login(String email, String password) async {
-    _setLoading(true);
-    _clearError();
-    final userData = await _apiService.login(email, password);
-    if (userData != null) {
-      _currentUser = User.fromJson(userData);
-
-      // Giriş başarılıysa veriyi hafızaya kaydet
-      await _saveUserToLocal(userData);
-
-      _setLoading(false);
-      return true;
-    }
-    _error = 'Login failed';
     _setLoading(false);
     return false;
   }
 
   Future<void> logout() async {
-    await _apiService.logout();
+    await fb_auth.FirebaseAuth.instance.signOut();
     _currentUser = null;
-
-    // Çıkış yapınca hafızadaki veriyi sil
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('user_data');
-
     notifyListeners();
   }
 
-  // --- YARDIMCI METODLAR ---
   Future<void> _saveUserToLocal(Map<String, dynamic> userData) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('user_data', json.encode(userData));

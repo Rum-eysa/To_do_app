@@ -113,12 +113,12 @@ class TodoItem extends StatelessWidget {
                   }
 
                   // 2. Bildirimi Planla
-                  await NotificationService().scheduleNotification(
-                    todo.id
+                  await NotificationService.scheduleNotification(
+                    id: todo.id
                         .hashCode, // Benzersiz ID (todo.id String ise hashCode kullan)
-                    "Görev Zamanı! 🔔",
-                    todo.title,
-                    finalDate,
+                    title: "Görev Zamanı! 🔔",
+                    body: todo.title,
+                    scheduledDate: finalDate,
                   );
 
                   ScaffoldMessenger.of(context).showSnackBar(

@@ -1,0 +1,35 @@
+# Node modules
+node_modules/
+**/node_modules/
+
+# Environment files
+.env
+**/.env
+*.env
+
+# SQLite database
+*.sqlite
+*.db
+
+# Firebase - SECRET KEYS
+**/firebase-adminsdk*.json
+**/serviceAccountKey.json
+backend/src/config/*.json
+**/google-services.json
+**/GoogleService-Info.plist
+**/firebase_options.dart
+
+# Flutter
+**/build/
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,9 +1,12 @@
-﻿const { Todo } = require('../models');
+﻿const { Todo, User } = require('../models');
 
 const getTodos = async (req, res) => {
   try {
+    const user = await User.findOne({ where: { uid: req.user.uid } });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
     const todos = await Todo.findAll({
-      where: { userId: req.user.id },
+      where: { userId: user.id },
       order: [['createdAt', 'DESC']]
     });
     res.json(todos);
@@ -15,16 +18,14 @@ const getTodos = async (req, res) => {
 
 const getTodo = async (req, res) => {
   try {
+    const user = await User.findOne({ where: { uid: req.user.uid } });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
     const todo = await Todo.findOne({
-      where: {
-        id: req.params.id,
-        userId: req.user.id
-      }
+      where: { id: req.params.id, userId: user.id }
     });
 
-    if (!todo) {
-      return res.status(404).json({ message: 'Todo not found' });
-    }
+    if (!todo) return res.status(404).json({ message: 'Todo not found' });
 
     res.json(todo);
   } catch (error) {
@@ -35,6 +36,9 @@ const getTodo = async (req, res) => {
 
 const createTodo = async (req, res) => {
   try {
+    const user = await User.findOne({ where: { uid: req.user.uid } });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
     const { title, description, priority, dueDate } = req.body;
 
     const todo = await Todo.create({
@@ -42,7 +46,7 @@ const createTodo = async (req, res) => {
       description: description || '',
       priority: priority || 'medium',
       dueDate: dueDate || null,
-      userId: req.user.id
+      userId: user.id  // Firebase uid değil, SQLite integer id
     });
 
     res.status(201).json(todo);
@@ -54,16 +58,14 @@ const createTodo = async (req, res) => {
 
 const updateTodo = async (req, res) => {
   try {
+    const user = await User.findOne({ where: { uid: req.user.uid } });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
     const todo = await Todo.findOne({
-      where: {
-        id: req.params.id,
-        userId: req.user.id
-      }
+      where: { id: req.params.id, userId: user.id }
     });
 
-    if (!todo) {
-      return res.status(404).json({ message: 'Todo not found' });
-    }
+    if (!todo) return res.status(404).json({ message: 'Todo not found' });
 
     const { title, description, completed, priority, dueDate } = req.body;
 
@@ -84,16 +86,14 @@ const updateTodo = async (req, res) => {
 
 const deleteTodo = async (req, res) => {
   try {
+    const user = await User.findOne({ where: { uid: req.user.uid } });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
     const todo = await Todo.findOne({
-      where: {
-        id: req.params.id,
-        userId: req.user.id
-      }
+      where: { id: req.params.id, userId: user.id }
     });
 
-    if (!todo) {
-      return res.status(404).json({ message: 'Todo not found' });
-    }
+    if (!todo) return res.status(404).json({ message: 'Todo not found' });
 
     await todo.destroy();
     res.json({ message: 'Todo removed' });
@@ -105,21 +105,16 @@ const deleteTodo = async (req, res) => {
 
 const toggleTodo = async (req, res) => {
   try {
+    const user = await User.findOne({ where: { uid: req.user.uid } });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
     const todo = await Todo.findOne({
-      where: {
-        id: req.params.id,
-        userId: req.user.id
-      }
+      where: { id: req.params.id, userId: user.id }
     });
 
-    if (!todo) {
-      return res.status(404).json({ message: 'Todo not found' });
-    }
+    if (!todo) return res.status(404).json({ message: 'Todo not found' });
 
-    await todo.update({
-      completed: !todo.completed
-    });
-
+    await todo.update({ completed: !todo.completed });
     res.json(todo);
   } catch (error) {
     console.error('Toggle todo error:', error);
@@ -127,6 +122,7 @@ const toggleTodo = async (req, res) => {
   }
 };
 
+// Hepsi module.exports ile — karışık export yok
 module.exports = {
   getTodos, getTodo, createTodo, updateTodo, deleteTodo, toggleTodo
 };

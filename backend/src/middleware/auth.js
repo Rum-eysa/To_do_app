@@ -1,30 +1,31 @@
-﻿const jwt = require('jsonwebtoken');
-const { User } = require('../models');
+﻿const { User } = require('../models');
+const admin = require('firebase-admin');
+const path = require('path');
+
+// Firebase Admin SDK'yı başlat (sadece bir kez)
+if (!admin.apps.length) {
+  const serviceAccount = require(
+    path.join(__dirname, '../config/todoapp-e58a5-firebase-adminsdk-fbsvc-354f83bd94.json')
+  );
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+}
 
 const protect = async (req, res, next) => {
-  let token;
-
-  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-    try {
-      token = req.headers.authorization.split(' ')[1];
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      
-      req.user = await User.findByPk(decoded.id, {
-        attributes: { exclude: ['password'] }
-      });
-
-      if (!req.user) {
-        return res.status(401).json({ message: 'User not found' });
-      }
-
-      next();
-    } catch (error) {
-      return res.status(401).json({ message: 'Not authorized' });
-    }
-  }
+  const token = req.headers.authorization?.split('Bearer ')[1];
 
   if (!token) {
-    return res.status(401).json({ message: 'Not authorized, no token' });
+    return res.status(401).json({ message: 'No token provided' });
+  }
+
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    req.user = { uid: decodedToken.uid, email: decodedToken.email };
+    next();
+  } catch (error) {
+    console.error('Firebase token doğrulama hatası:', error);
+    return res.status(401).json({ message: 'Unauthorized' });
   }
 };
 

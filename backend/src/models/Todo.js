@@ -28,7 +28,7 @@ const Todo = sequelize.define('Todo', {
     allowNull: true
   },
   userId: {
-    type: DataTypes.UUID,
+    type: DataTypes.INTEGER, // ← UUID'den INTEGER'a düzeltildi (User.id ile eşleşmeli)
     allowNull: false,
     references: {
       model: 'Users',

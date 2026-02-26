@@ -14,10 +14,10 @@ const sequelize = new Sequelize({
 const connectDB = async () => {
   try {
     await sequelize.authenticate();
-    console.log('✅ SQLite connected successfully');
+    console.log('✅ Firebase connected successfully');
     
     // sync içindeki '+' silindi, yerine 'alter' geldi.
-    await sequelize.sync();
+    await sequelize.sync({ force: true });
     console.log('✅ Database synchronized');
   } catch (error) {
     console.error('❌ SQLite connection error:', error);

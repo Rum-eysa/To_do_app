@@ -82,4 +82,26 @@ const getMe = async (req, res) => {
   }
 };
 
-module.exports = { register, login, getMe };
+const registerOrLogin = async (req, res) => {
+  const { uid, email } = req.user;
+  const { username } = req.body; // ← body'den username al
+
+  try {
+    let user = await User.findOne({ where: { uid } });
+
+    if (!user) {
+      user = await User.create({ 
+        uid, 
+        email, 
+        username: username || 'Kullanıcı' // ← username eklendi
+      });
+    }
+
+    return res.status(200).json({ message: 'User authenticated', user });
+  } catch (error) {
+    console.error('Error in registerOrLogin:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+module.exports = { register, login, getMe, registerOrLogin };

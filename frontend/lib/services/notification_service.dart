@@ -18,8 +18,7 @@ class NotificationService {
     tz_data.initializeTimeZones();
 
     try {
-      final String timeZoneName =
-          (await FlutterTimezone.getLocalTimezone()).identifier;
+      final String timeZoneName = await FlutterTimezone.getLocalTimezone();
       tz.setLocalLocation(tz.getLocation(timeZoneName));
     } catch (e) {
       debugPrint("Timezone hatası: $e");
@@ -29,9 +28,7 @@ class NotificationService {
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
     const InitializationSettings initializationSettings =
-        InitializationSettings(
-      android: initializationSettingsAndroid,
-    );
+        InitializationSettings(android: initializationSettingsAndroid);
 
     await flutterLocalNotificationsPlugin.initialize(
       initializationSettings,
@@ -45,6 +42,7 @@ class NotificationService {
 
   Future<void> _requestPermissions() async {
     if (kIsWeb) return;
+
     final androidPlugin =
         flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
@@ -55,8 +53,6 @@ class NotificationService {
     }
   }
 
-  // --- METOD ADI DÜZELTİLDİ ---
-  // Statik yaparak AddTodoScreen içinden kolayca çağrılmasını sağlıyoruz
   static Future<void> scheduleNotification({
     required int id,
     required String title,
@@ -66,46 +62,48 @@ class NotificationService {
     if (kIsWeb) return;
 
     final tzDate = tz.TZDateTime.from(scheduledDate, tz.local);
-
-    // Geçmiş tarihe bildirim kurma
     if (tzDate.isBefore(tz.TZDateTime.now(tz.local))) return;
 
+    const notificationDetails = NotificationDetails(
+      android: AndroidNotificationDetails(
+        'todo_reminders',
+        'Görev Hatırlatıcılar',
+        importance: Importance.max,
+        priority: Priority.high,
+      ),
+    );
+
+    // v18: positional argümanlar, uiLocalNotificationDateInterpretation zorunlu
     await NotificationService().flutterLocalNotificationsPlugin.zonedSchedule(
-          id,
-          title,
-          body,
-          tzDate,
-          const NotificationDetails(
-            android: AndroidNotificationDetails(
-              'todo_reminders',
-              'Görev Hatırlatıcılar',
-              importance: Importance.max,
-              priority: Priority.high,
-            ),
-          ),
+          id, // positional
+          title, // positional
+          body, // positional
+          tzDate, // positional
+          notificationDetails, // positional
           androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
           uiLocalNotificationDateInterpretation:
               UILocalNotificationDateInterpretation.absoluteTime,
         );
   }
 
-  // Anlık test bildirimi
   Future<void> showInstantNotification(String title, String body) async {
     if (kIsWeb) return;
 
-    const AndroidNotificationDetails androidDetails =
-        AndroidNotificationDetails(
-      'test_channel',
-      'Test Bildirimleri',
-      importance: Importance.max,
-      priority: Priority.high,
+    const notificationDetails = NotificationDetails(
+      android: AndroidNotificationDetails(
+        'test_channel',
+        'Test Bildirimleri',
+        importance: Importance.max,
+        priority: Priority.high,
+      ),
     );
 
+    // v18: positional argümanlar
     await flutterLocalNotificationsPlugin.show(
-      999,
-      title,
-      body,
-      const NotificationDetails(android: androidDetails),
+      999, // positional
+      title, // positional
+      body, // positional
+      notificationDetails, // positional
     );
   }
 }

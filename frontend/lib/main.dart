@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:get/get.dart';
+import 'controllers/auth_controller.dart';
+import 'controllers/todo_controller.dart';
 import 'providers/auth_provider.dart';
 import 'providers/todo_provider.dart';
 import 'screens/auth_screen.dart';
@@ -14,6 +16,10 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  Get.put(AuthController());
+  Get.put(TodoController());
+
   runApp(const MyApp());
 }
 
@@ -28,13 +34,14 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => TodoProvider()),
       ],
       child: GetMaterialApp(
-        // ← MaterialApp → GetMaterialApp
         title: 'Todo App',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
           useMaterial3: true,
         ),
+
+        // StreamBuilder kaldırıldı, route sistemi eklendi
         home: StreamBuilder<User?>(
           stream: FirebaseAuth.instance.authStateChanges(),
           builder: (context, snapshot) {
@@ -49,6 +56,12 @@ class MyApp extends StatelessWidget {
             return const AuthScreen();
           },
         ),
+
+        // GetX route tanımlamaları
+        getPages: [
+          GetPage(name: '/auth', page: () => const AuthScreen()),
+          GetPage(name: '/home', page: () => const HomeScreen()),
+        ],
       ),
     );
   }

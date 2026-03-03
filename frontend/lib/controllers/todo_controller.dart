@@ -4,18 +4,16 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/todo.dart';
-import 'package:flutter/foundation.dart';
+import '../utils/error_handler.dart';
 
 class TodoController extends GetxController {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Observable değişkenler
   final todos = <Todo>[].obs;
   final isLoading = false.obs;
   final filter = 'all'.obs;
 
-  // Getter'lar
   List<Todo> get filteredTodos {
     switch (filter.value) {
       case 'active':
@@ -43,20 +41,16 @@ class TodoController extends GetxController {
 
   Future<void> fetchTodos() async {
     isLoading.value = true;
-
     try {
       await _loadFromCache();
-
       final ref = _todosRef;
       if (ref == null) return;
-
       final snapshot = await ref.orderBy('createdAt', descending: true).get();
       todos.value =
           snapshot.docs.map((doc) => Todo.fromFirestore(doc)).toList();
-
       await _saveToCache();
     } catch (e) {
-      debugPrint('fetchTodos error: $e');
+      ErrorHandler.handle(e);
     } finally {
       isLoading.value = false;
     }
@@ -103,7 +97,7 @@ class TodoController extends GetxController {
       await _saveToCache();
       return true;
     } catch (e) {
-      debugPrint('addTodo error: $e');
+      ErrorHandler.handle(e);
       return false;
     }
   }
@@ -139,7 +133,7 @@ class TodoController extends GetxController {
       }
       return true;
     } catch (e) {
-      debugPrint('updateTodo error: $e');
+      ErrorHandler.handle(e);
       return false;
     }
   }
@@ -170,7 +164,7 @@ class TodoController extends GetxController {
       await _saveToCache();
       return true;
     } catch (e) {
-      debugPrint('toggleTodo error: $e');
+      ErrorHandler.handle(e);
       return false;
     }
   }
@@ -185,7 +179,7 @@ class TodoController extends GetxController {
       await _saveToCache();
       return true;
     } catch (e) {
-      debugPrint('deleteTodo error: $e');
+      ErrorHandler.handle(e);
       return false;
     }
   }
@@ -200,7 +194,7 @@ class TodoController extends GetxController {
       final data = todos.map((t) => t.toMap()).toList();
       await prefs.setString('todos_cache', json.encode(data));
     } catch (e) {
-      debugPrint('Cache kaydetme hatası: $e');
+      ErrorHandler.handle(e);
     }
   }
 
@@ -213,7 +207,7 @@ class TodoController extends GetxController {
         todos.value = list.map((e) => Todo.fromMap(e)).toList();
       }
     } catch (e) {
-      debugPrint('Cache yükleme hatası: $e');
+      ErrorHandler.handle(e);
     }
   }
 }

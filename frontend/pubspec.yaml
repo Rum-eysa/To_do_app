@@ -15,7 +15,6 @@ dependencies:
   cloud_firestore: ^6.1.2
   cupertino_icons: ^1.0.6
   get: ^4.6.6
-  http: ^0.15.0
   shared_preferences: ^2.5.4
   intl: ^0.20.2
   flutter_dotenv: ^6.0.0
@@ -41,4 +40,4 @@ dependency_overrides:
   collection: 1.18.0  # Başına ^ koyma, tam olarak bu sürümü zorla
   http_parser: 4.0.0  # Sabit sürüm kullanarak uyuşmazlığı engelle
   intl: ^0.19.0
-  http: ^1.1.0
+  

@@ -1,12 +1,10 @@
-﻿import 'dart:convert';
-import 'package:http/http.dart' as http;
+﻿import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
-class ApiService {
-  // Web için localhost, Android emülatör için 10.0.2.2
+class ApiService extends GetConnect {
   static const String _baseUrl = 'http://localhost:5000/api';
 
-  // Her seferinde Firebase'den taze token al
   Future<Map<String, String>> _getHeaders() async {
     final headers = {
       'Content-Type': 'application/json',
@@ -15,28 +13,25 @@ class ApiService {
 
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      final token = await user.getIdToken(); // ← her seferinde taze token
+      final token = await user.getIdToken();
       if (token != null) {
         headers['Authorization'] = 'Bearer $token';
       }
     }
-
     return headers;
   }
 
-  // --- TODO ROTALARI ---
-
   Future<List<dynamic>?> getTodos() async {
     try {
-      final response = await http.get(
-        Uri.parse('$_baseUrl/todos'),
+      final response = await get(
+        '$_baseUrl/todos',
         headers: await _getHeaders(),
       );
-      if (response.statusCode == 200) return jsonDecode(response.body);
-      print('getTodos hata: ${response.statusCode} ${response.body}');
+      if (response.statusCode == 200) return response.body;
+      debugPrint('getTodos hata: ${response.statusCode}');
       return null;
     } catch (e) {
-      print('getTodos exception: $e');
+      debugPrint('getTodos exception: $e');
       return null;
     }
   }
@@ -44,29 +39,30 @@ class ApiService {
   Future<Map<String, dynamic>?> createTodo(
       Map<String, dynamic> todoData) async {
     try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/todos'),
+      final response = await post(
+        '$_baseUrl/todos',
+        todoData,
         headers: await _getHeaders(),
-        body: jsonEncode(todoData),
       );
-      if (response.statusCode == 201) return jsonDecode(response.body);
-      print('createTodo hata: ${response.statusCode} ${response.body}');
+      if (response.statusCode == 201) return response.body;
+      debugPrint('createTodo hata: ${response.statusCode}');
       return null;
     } catch (e) {
-      print('createTodo exception: $e');
+      debugPrint('createTodo exception: $e');
       return null;
     }
   }
 
   Future<bool> toggleTodo(String id) async {
     try {
-      final response = await http.patch(
-        Uri.parse('$_baseUrl/todos/$id/toggle'),
+      final response = await patch(
+        '$_baseUrl/todos/$id/toggle',
+        {},
         headers: await _getHeaders(),
       );
       return response.statusCode == 200;
     } catch (e) {
-      print('toggleTodo exception: $e');
+      debugPrint('toggleTodo exception: $e');
       return false;
     }
   }
@@ -74,30 +70,51 @@ class ApiService {
   Future<Map<String, dynamic>?> updateTodo(
       String id, Map<String, dynamic> todoData) async {
     try {
-      final response = await http.put(
-        Uri.parse('$_baseUrl/todos/$id'),
+      final response = await put(
+        '$_baseUrl/todos/$id',
+        todoData,
         headers: await _getHeaders(),
-        body: jsonEncode(todoData),
       );
-      if (response.statusCode == 200) return jsonDecode(response.body);
-      print('updateTodo hata: ${response.statusCode} ${response.body}');
+      if (response.statusCode == 200) return response.body;
+      debugPrint('updateTodo hata: ${response.statusCode}');
       return null;
     } catch (e) {
-      print('updateTodo exception: $e');
+      debugPrint('updateTodo exception: $e');
       return null;
     }
   }
 
   Future<bool> deleteTodo(String id) async {
     try {
-      final response = await http.delete(
-        Uri.parse('$_baseUrl/todos/$id'),
+      final response = await delete(
+        '$_baseUrl/todos/$id',
         headers: await _getHeaders(),
       );
       return response.statusCode == 200;
     } catch (e) {
-      print('deleteTodo exception: $e');
+      debugPrint('deleteTodo exception: $e');
       return false;
+    }
+  }
+
+  Future<bool> syncUser({
+    required String uid,
+    required String email,
+    required String username,
+    required String idToken,
+  }) async {
+    try {
+      final response = await post(
+        '$_baseUrl/auth',
+        {'uid': uid, 'email': email, 'username': username},
+        headers: {
+          'Authorization': 'Bearer $idToken',
+          'Content-Type': 'application/json',
+        },
+      );
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) {
+      return true;
     }
   }
 }

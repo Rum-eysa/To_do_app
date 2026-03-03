@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/todo.dart';
+import 'package:flutter/foundation.dart';
 
 class TodoController extends GetxController {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -55,7 +56,7 @@ class TodoController extends GetxController {
 
       await _saveToCache();
     } catch (e) {
-      print('fetchTodos error: $e');
+      debugPrint('fetchTodos error: $e');
     } finally {
       isLoading.value = false;
     }
@@ -102,7 +103,7 @@ class TodoController extends GetxController {
       await _saveToCache();
       return true;
     } catch (e) {
-      print('addTodo error: $e');
+      debugPrint('addTodo error: $e');
       return false;
     }
   }
@@ -138,7 +139,7 @@ class TodoController extends GetxController {
       }
       return true;
     } catch (e) {
-      print('updateTodo error: $e');
+      debugPrint('updateTodo error: $e');
       return false;
     }
   }
@@ -169,7 +170,7 @@ class TodoController extends GetxController {
       await _saveToCache();
       return true;
     } catch (e) {
-      print('toggleTodo error: $e');
+      debugPrint('toggleTodo error: $e');
       return false;
     }
   }
@@ -184,7 +185,7 @@ class TodoController extends GetxController {
       await _saveToCache();
       return true;
     } catch (e) {
-      print('deleteTodo error: $e');
+      debugPrint('deleteTodo error: $e');
       return false;
     }
   }
@@ -199,7 +200,7 @@ class TodoController extends GetxController {
       final data = todos.map((t) => t.toMap()).toList();
       await prefs.setString('todos_cache', json.encode(data));
     } catch (e) {
-      print('Cache kaydetme hatası: $e');
+      debugPrint('Cache kaydetme hatası: $e');
     }
   }
 
@@ -212,7 +213,7 @@ class TodoController extends GetxController {
         todos.value = list.map((e) => Todo.fromMap(e)).toList();
       }
     } catch (e) {
-      print('Cache yükleme hatası: $e');
+      debugPrint('Cache yükleme hatası: $e');
     }
   }
 }

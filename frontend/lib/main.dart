@@ -8,6 +8,17 @@ import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
 import 'firebase_options.dart';
 import 'services/notification_service.dart';
+import 'middleware/auth_middleware.dart';
+
+// 1. AppBinding sınıfını main dışına taşıdık.
+class AppBinding extends Bindings {
+  @override
+  void dependencies() {
+    // fyi: İhtiyaç duyduğunuzda JWT işlemlerini de AuthController içinde başlatabilirsiniz.
+    Get.lazyPut(() => AuthController());
+    Get.lazyPut(() => TodoController());
+  }
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,13 +27,9 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Notification servisini başlat (Instance üzerinden çağırmak daha güvenlidir)
+  // Notification servisini başlat
   final notificationService = NotificationService();
   await notificationService.init();
-
-  // Controller'ları lazyPut veya put ile başlatıyoruz
-  Get.put(AuthController());
-  Get.put(TodoController());
 
   runApp(const MyApp());
 }
@@ -33,15 +40,15 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
-      // Burada fazladan bir parantez ve boşluk vardı, düzeltildi.
       title: 'Todo App',
       debugShowCheckedModeBanner: false,
+      // 2. Hazırladığımız Binding'i buraya ekledik.
+      initialBinding: AppBinding(),
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
 
-      // Auth durumuna göre ana ekranı belirleyen yapı
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
@@ -57,10 +64,13 @@ class MyApp extends StatelessWidget {
         },
       ),
 
-      // GetX route tanımlamaları
       getPages: [
         GetPage(name: '/auth', page: () => const AuthScreen()),
-        GetPage(name: '/home', page: () => const HomeScreen()),
+        GetPage(
+          name: '/home',
+          page: () => const HomeScreen(),
+          middlewares: [AuthMiddleware()], // ← eklendi
+        ),
       ],
     );
   }

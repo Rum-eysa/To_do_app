@@ -10,12 +10,16 @@ import 'providers/todo_provider.dart';
 import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
 import 'firebase_options.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+// Notification servisini başlat
+  await NotificationService().init(); // ← eklend
 
   Get.put(AuthController());
   Get.put(TodoController());

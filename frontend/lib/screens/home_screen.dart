@@ -255,7 +255,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   onTap: () => Get.to(
                                     () => AddTodoScreen(todo: todo),
                                   ),
-                                  child: TodoItem(
+                                  child: TodoItemCard(
                                     todo: todo,
                                     onToggle: () =>
                                         _todoController.toggleTodo(todo.id),

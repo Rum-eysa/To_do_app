@@ -1,7 +1,7 @@
 ﻿import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import '../providers/todo_provider.dart';
+import '../controllers/todo_controller.dart';
 import '../services/notification_service.dart';
 import '../models/todo.dart';
 
@@ -22,10 +22,13 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
   late String _selectedPriority;
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
-  bool _isLoading = false;
-
-  // EKLEME: Kullanıcının hatırlatıcı isteyip istemediğini kontrol eder
   bool _setReminder = true;
+
+  // GetX controller
+  final TodoController _todoController = Get.find<TodoController>();
+
+  // isLoading artık GetX ile yönetiliyor
+  final _isLoading = false.obs;
 
   @override
   void initState() {
@@ -33,9 +36,7 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
     _titleController = TextEditingController(text: widget.todo?.title ?? "");
     _descriptionController =
         TextEditingController(text: widget.todo?.description ?? "");
-
     _selectedPriority = widget.todo?.priority ?? 'medium';
-
     _selectedDate =
         widget.todo?.dueDate ?? widget.initialDate ?? DateTime.now();
 
@@ -67,9 +68,7 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
     );
 
     if (picked != null && mounted) {
-      setState(() {
-        _selectedDate = picked;
-      });
+      setState(() => _selectedDate = picked);
     }
   }
 
@@ -79,9 +78,81 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
       initialTime: _selectedTime ?? TimeOfDay.now(),
     );
     if (picked != null && mounted) {
-      setState(() {
-        _selectedTime = picked;
-      });
+      setState(() => _selectedTime = picked);
+    }
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    _isLoading.value = true;
+
+    final dateToUse = _selectedDate ?? DateTime.now();
+    final timeToUse = _selectedTime ?? TimeOfDay.now();
+    final reminderDateTime = DateTime(
+      dateToUse.year,
+      dateToUse.month,
+      dateToUse.day,
+      timeToUse.hour,
+      timeToUse.minute,
+    );
+
+    bool success;
+    final isEditing = widget.todo != null;
+
+    if (isEditing) {
+      success = await _todoController.updateTodo(
+        widget.todo!.id,
+        _titleController.text,
+        _descriptionController.text,
+        _selectedPriority,
+        reminderDateTime,
+      );
+    } else {
+      success = await _todoController.addTodo(
+        _titleController.text,
+        _descriptionController.text,
+        _selectedPriority,
+        reminderDateTime,
+      );
+    }
+
+    if (success) {
+      if (_setReminder) {
+        await NotificationService.scheduleNotification(
+          id: widget.todo?.id.hashCode ?? DateTime.now().millisecond,
+          title: "🔔 Görev: ${_titleController.text}",
+          body: _descriptionController.text.isNotEmpty
+              ? _descriptionController.text
+              : "Görev vakti geldi!",
+          scheduledDate: reminderDateTime,
+        );
+      }
+      Get.back(); // ← Navigator.pop yerine
+    } else {
+      _isLoading.value = false;
+
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final selectedDateOnly = _selectedDate != null
+          ? DateTime(
+              _selectedDate!.year, _selectedDate!.month, _selectedDate!.day)
+          : null;
+
+      String errorMessage = 'İşlem başarısız!';
+      if (selectedDateOnly != null && selectedDateOnly.isBefore(today)) {
+        errorMessage = 'Geçmiş bir tarihe görev ekleyemezsiniz! 🛑';
+      }
+
+      // ← ScaffoldMessenger yerine Get.snackbar
+      Get.snackbar(
+        'Hata',
+        errorMessage,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.all(16),
+      );
     }
   }
 
@@ -159,8 +230,6 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
                         : _selectedTime!.format(context)),
                   ),
                 ),
-
-                // EKLEME: Hatırlatıcı Açma/Kapama Switch'i
                 SwitchListTile(
                   title: const Text("Set Notification Alarm"),
                   subtitle: const Text("Receive a reminder at selected time"),
@@ -169,103 +238,23 @@ class _AddTodoScreenState extends State<AddTodoScreen> {
                   secondary: const Icon(Icons.notifications_active,
                       color: Colors.amber),
                 ),
-
                 const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: _isLoading
-                      ? null
-                      : () async {
-                          if (_formKey.currentState!.validate()) {
-                            setState(() => _isLoading = true);
 
-                            final todoProvider = Provider.of<TodoProvider>(
-                                context,
-                                listen: false);
-
-                            // Tarih ve saat birleştiriliyor
-                            final dateToUse = _selectedDate ?? DateTime.now();
-                            final timeToUse = _selectedTime ?? TimeOfDay.now();
-                            final reminderDateTime = DateTime(
-                              dateToUse.year,
-                              dateToUse.month,
-                              dateToUse.day,
-                              timeToUse.hour,
-                              timeToUse.minute,
-                            );
-
-                            bool success;
-                            if (isEditing) {
-                              success = await todoProvider.updateTodo(
-                                widget.todo!.id,
-                                _titleController.text,
-                                _descriptionController.text,
-                                _selectedPriority,
-                                reminderDateTime,
-                              );
-                            } else {
-                              success = await todoProvider.addTodo(
-                                _titleController.text,
-                                _descriptionController.text,
-                                _selectedPriority,
-                                reminderDateTime,
-                              );
-                            }
-
-                            if (success) {
-                              // EKLEME: Eğer hatırlatıcı açıksa bildirimi kur
-                              if (_setReminder) {
-                                await NotificationService.scheduleNotification(
-                                  // Statik çağrı
-                                  id: widget.todo?.id.hashCode ??
-                                      DateTime.now().millisecond,
-                                  title: "🔔 Görev: ${_titleController.text}",
-                                  body: _descriptionController.text.isNotEmpty
-                                      ? _descriptionController.text
-                                      : "Görev vakti geldi!",
-                                  scheduledDate:
-                                      reminderDateTime, // Parametre isimlerine dikkat!
-                                );
-                              }
-                              if (mounted) Navigator.pop(context);
-                            } else {
-                              setState(() => _isLoading = false);
-
-                              final now = DateTime.now();
-                              final today =
-                                  DateTime(now.year, now.month, now.day);
-                              final selectedDateOnly = _selectedDate != null
-                                  ? DateTime(_selectedDate!.year,
-                                      _selectedDate!.month, _selectedDate!.day)
-                                  : null;
-
-                              String errorMessage = 'İşlem başarısız!';
-
-                              if (selectedDateOnly != null &&
-                                  selectedDateOnly.isBefore(today)) {
-                                errorMessage =
-                                    'Geçmiş bir tarihe görev ekleyemezsiniz! 🛑';
-                              }
-
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(errorMessage),
-                                  backgroundColor: Colors.redAccent,
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
-                            }
-                          }
-                        },
-                  style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 50)),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white))
-                      : Text(isEditing ? 'Update Todo' : 'Add Todo & Reminder'),
-                ),
+                // Obx ile isLoading değişince otomatik güncellenir
+                Obx(() => ElevatedButton(
+                      onPressed: _isLoading.value ? null : _submit,
+                      style: ElevatedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 50)),
+                      child: _isLoading.value
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white))
+                          : Text(isEditing
+                              ? 'Update Todo'
+                              : 'Add Todo & Reminder'),
+                    )),
               ],
             ),
           ),

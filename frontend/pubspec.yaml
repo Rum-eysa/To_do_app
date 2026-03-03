@@ -21,7 +21,7 @@ dependencies:
   intl: ^0.20.2
   flutter_dotenv: ^6.0.0
   flutter_local_notifications: ^18.0.1   # ← dev.2'den stabil versiyona düş
-  flutter_timezone: ^2.1.0               # ← 5.0.1'den düş, String döndüren versiyon
+  flutter_timezone: ^3.0.0               # ← 5.0.1'den düş, String döndüren versiyon
   weekly_date_picker: ^1.1.0
   timezone: ^0.9.4     
   path_provider: ^2.1.1

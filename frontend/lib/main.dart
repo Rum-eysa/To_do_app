@@ -1,12 +1,9 @@
 ﻿import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:get/get.dart';
 import 'controllers/auth_controller.dart';
 import 'controllers/todo_controller.dart';
-import 'providers/auth_provider.dart';
-import 'providers/todo_provider.dart';
 import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
 import 'firebase_options.dart';
@@ -14,13 +11,16 @@ import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-// Notification servisini başlat
-  await NotificationService().init(); // ← eklend
+  // Notification servisini başlat (Instance üzerinden çağırmak daha güvenlidir)
+  final notificationService = NotificationService();
+  await notificationService.init();
 
+  // Controller'ları lazyPut veya put ile başlatıyoruz
   Get.put(AuthController());
   Get.put(TodoController());
 
@@ -32,41 +32,36 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => TodoProvider()),
-      ],
-      child: GetMaterialApp(
-        title: 'Todo App',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-          useMaterial3: true,
-        ),
-
-        // StreamBuilder kaldırıldı, route sistemi eklendi
-        home: StreamBuilder<User?>(
-          stream: FirebaseAuth.instance.authStateChanges(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Scaffold(
-                body: Center(child: CircularProgressIndicator()),
-              );
-            }
-            if (snapshot.hasData) {
-              return const HomeScreen();
-            }
-            return const AuthScreen();
-          },
-        ),
-
-        // GetX route tanımlamaları
-        getPages: [
-          GetPage(name: '/auth', page: () => const AuthScreen()),
-          GetPage(name: '/home', page: () => const HomeScreen()),
-        ],
+    return GetMaterialApp(
+      // Burada fazladan bir parantez ve boşluk vardı, düzeltildi.
+      title: 'Todo App',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        useMaterial3: true,
       ),
+
+      // Auth durumuna göre ana ekranı belirleyen yapı
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+          if (snapshot.hasData) {
+            return const HomeScreen();
+          }
+          return const AuthScreen();
+        },
+      ),
+
+      // GetX route tanımlamaları
+      getPages: [
+        GetPage(name: '/auth', page: () => const AuthScreen()),
+        GetPage(name: '/home', page: () => const HomeScreen()),
+      ],
     );
   }
 }

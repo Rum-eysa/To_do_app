@@ -6,15 +6,16 @@ import 'controllers/auth_controller.dart';
 import 'controllers/todo_controller.dart';
 import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/reminder_screen.dart';
 import 'firebase_options.dart';
 import 'services/notification_service.dart';
+import 'services/api_service.dart';
 import 'middleware/auth_middleware.dart';
 
-// 1. AppBinding sınıfını main dışına taşıdık.
 class AppBinding extends Bindings {
   @override
   void dependencies() {
-    // fyi: İhtiyaç duyduğunuzda JWT işlemlerini de AuthController içinde başlatabilirsiniz.
+    Get.lazyPut(() => ApiService());
     Get.lazyPut(() => AuthController());
     Get.lazyPut(() => TodoController());
   }
@@ -27,7 +28,6 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Notification servisini başlat
   final notificationService = NotificationService();
   await notificationService.init();
 
@@ -42,13 +42,11 @@ class MyApp extends StatelessWidget {
     return GetMaterialApp(
       title: 'Todo App',
       debugShowCheckedModeBanner: false,
-      // 2. Hazırladığımız Binding'i buraya ekledik.
       initialBinding: AppBinding(),
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
@@ -63,13 +61,17 @@ class MyApp extends StatelessWidget {
           return const AuthScreen();
         },
       ),
-
       getPages: [
         GetPage(name: '/auth', page: () => const AuthScreen()),
         GetPage(
           name: '/home',
           page: () => const HomeScreen(),
-          middlewares: [AuthMiddleware()], // ← eklendi
+          middlewares: [AuthMiddleware()],
+        ),
+        GetPage(
+          name: '/reminder',
+          page: () => ReminderScreen(),
+          middlewares: [AuthMiddleware()],
         ),
       ],
     );

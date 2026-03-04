@@ -1,27 +1,26 @@
 import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../models/user.dart';
+import '../services/api_service.dart';
+import '../utils/error_handler.dart';
 
 class AuthController extends GetxController {
   final fb_auth.FirebaseAuth _auth = fb_auth.FirebaseAuth.instance;
+  late final ApiService _apiService;
 
-  static const String _baseUrl = 'http://10.0.2.2:5000/api';
-
-  // Observable değişkenler
   final isLoading = false.obs;
   final error = RxnString();
-  final currentUser = Rxn<User>(); // null olabilir
+  final currentUser = Rxn<User>();
 
-  // Getter'lar
   bool get isAuthenticated => currentUser.value != null;
 
   @override
   void onInit() {
     super.onInit();
-    // Firebase auth durumunu dinle
+    _apiService = Get.find<ApiService>();
+
     _auth.authStateChanges().listen((fbUser) {
       if (fbUser == null) {
         currentUser.value = null;
@@ -33,7 +32,7 @@ class AuthController extends GetxController {
         );
       }
     });
-    loadUser(); // Cache'den yükle
+    loadUser();
   }
 
   Future<void> loadUser() async {
@@ -54,22 +53,14 @@ class AuthController extends GetxController {
       final String? idToken = await firebaseUser.getIdToken();
       if (idToken == null) return false;
 
-      final response = await http.post(
-        Uri.parse('$_baseUrl/auth'),
-        headers: {
-          'Authorization': 'Bearer $idToken',
-          'Content-Type': 'application/json',
-        },
-        body: json.encode({
-          'uid': firebaseUser.uid,
-          'email': firebaseUser.email,
-          'username': firebaseUser.displayName ?? 'Kullanıcı',
-        }),
+      return await _apiService.syncUser(
+        uid: firebaseUser.uid,
+        email: firebaseUser.email ?? '',
+        username: firebaseUser.displayName ?? 'Kullanıcı',
+        idToken: idToken,
       );
-
-      return response.statusCode == 200 || response.statusCode == 201;
     } catch (e) {
-      return true; // Backend hatası login'i engellemesin
+      return true;
     }
   }
 
@@ -84,8 +75,9 @@ class AuthController extends GetxController {
       );
 
       final firebaseUser = userCredential.user;
-      if (firebaseUser == null)
+      if (firebaseUser == null) {
         throw Exception('Firebase kullanıcısı alınamadı');
+      }
 
       await _syncWithBackend(firebaseUser);
 
@@ -108,6 +100,7 @@ class AuthController extends GetxController {
       return true;
     } catch (e) {
       error.value = e.toString();
+      ErrorHandler.handle(e);
       isLoading.value = false;
       return false;
     }
@@ -124,8 +117,9 @@ class AuthController extends GetxController {
       );
 
       final firebaseUser = userCredential.user;
-      if (firebaseUser == null)
+      if (firebaseUser == null) {
         throw Exception('Firebase kullanıcısı alınamadı');
+      }
 
       await firebaseUser.updateDisplayName(username);
       await firebaseUser.reload();
@@ -151,6 +145,7 @@ class AuthController extends GetxController {
       return true;
     } catch (e) {
       error.value = e.toString();
+      ErrorHandler.handle(e);
       isLoading.value = false;
       return false;
     }
@@ -161,7 +156,7 @@ class AuthController extends GetxController {
     currentUser.value = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('user_data');
-    Get.offAllNamed('/auth'); // ← GetX navigation
+    Get.offAllNamed('/auth');
   }
 
   Future<void> _saveUserToLocal(Map<String, dynamic> userData) async {

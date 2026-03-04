@@ -1,7 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/auth_controller.dart';
-import '../controllers/todo_controller.dart'; // ← bir sonraki aşamada yazacağız
+import '../controllers/todo_controller.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -17,7 +17,6 @@ class _AuthScreenState extends State<AuthScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  // GetX controller — Provider.of yerine Get.find
   final AuthController _authController = Get.find<AuthController>();
 
   @override
@@ -45,9 +44,8 @@ class _AuthScreenState extends State<AuthScreen> {
       }
 
       if (success) {
-        // TodoController henüz yoksa bu satırı şimdilik yorum satırı yap
         Get.find<TodoController>().fetchTodos();
-        Get.offAllNamed('/home'); // ← Navigator yerine GetX navigation
+        Get.offAllNamed('/home');
       }
     }
   }
@@ -99,10 +97,12 @@ class _AuthScreenState extends State<AuthScreen> {
                               ),
                             ),
                             validator: (value) {
-                              if (value == null || value.isEmpty)
+                              if (value == null || value.isEmpty) {
                                 return 'Please enter a username';
-                              if (value.length < 3)
+                              }
+                              if (value.length < 3) {
                                 return 'Username must be at least 3 characters';
+                              }
                               return null;
                             },
                           ),
@@ -117,10 +117,12 @@ class _AuthScreenState extends State<AuthScreen> {
                             ),
                           ),
                           validator: (value) {
-                            if (value == null || value.isEmpty)
+                            if (value == null || value.isEmpty) {
                               return 'Please enter your email';
-                            if (!value.contains('@'))
+                            }
+                            if (!value.contains('@')) {
                               return 'Please enter a valid email';
+                            }
                             return null;
                           },
                         ),
@@ -136,10 +138,12 @@ class _AuthScreenState extends State<AuthScreen> {
                             ),
                           ),
                           validator: (value) {
-                            if (value == null || value.isEmpty)
+                            if (value == null || value.isEmpty) {
                               return 'Please enter a password';
-                            if (!_isLogin && value.length < 6)
+                            }
+                            if (!_isLogin && value.length < 6) {
                               return 'Password must be at least 6 characters';
+                            }
                             return null;
                           },
                         ),
@@ -147,8 +151,6 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-
-                  // Obx — error değişince otomatik güncellenir
                   Obx(
                     () => _authController.error.value != null
                         ? Container(
@@ -165,10 +167,7 @@ class _AuthScreenState extends State<AuthScreen> {
                           )
                         : const SizedBox.shrink(),
                   ),
-
                   const SizedBox(height: 16),
-
-                  // Obx — isLoading değişince otomatik güncellenir
                   Obx(() => SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
@@ -189,7 +188,6 @@ class _AuthScreenState extends State<AuthScreen> {
                                 ),
                         ),
                       )),
-
                   const SizedBox(height: 16),
                   TextButton(
                     onPressed: () => setState(() => _isLogin = !_isLogin),

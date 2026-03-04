@@ -15,19 +15,6 @@ class TodoItem extends StatelessWidget {
     required this.onDelete,
   });
 
-  Color _getPriorityColor() {
-    switch (todo.priority) {
-      case 'high':
-        return Colors.red;
-      case 'medium':
-        return Colors.orange;
-      case 'low':
-        return Colors.green;
-      default:
-        return Colors.grey;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -76,7 +63,6 @@ class TodoItem extends StatelessWidget {
               ),
           ],
         ),
-        // trailing yerine onTap ve alt satırda buton kullanıyoruz
         trailing: null,
         isThreeLine: false,
       ),
@@ -84,7 +70,6 @@ class TodoItem extends StatelessWidget {
   }
 }
 
-// TodoItem'ı Card içinde sarmalayarak butonları alt kısma taşıyoruz
 class TodoItemCard extends StatelessWidget {
   final Todo todo;
   final VoidCallback onToggle;
@@ -218,9 +203,10 @@ class TodoItemCard extends StatelessWidget {
                           scheduledDate: scheduledDate,
                         );
 
+                        // context async gap sonrası kullanılmamalı
                         Get.snackbar(
                           'Bildirim Kuruldu',
-                          'Hatırlatıcı: ${pickedTime.format(context)}',
+                          'Hatırlatıcı: ${pickedTime.hour}:${pickedTime.minute.toString().padLeft(2, '0')}',
                           backgroundColor: Colors.green,
                           colorText: Colors.white,
                           snackPosition: SnackPosition.BOTTOM,

@@ -1,85 +1,90 @@
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
+import 'package:get/get.dart';
+import '../controllers/todo_controller.dart';
 import '../services/notification_service.dart';
 
-class ReminderScreen extends StatefulWidget {
-  @override
-  _ReminderScreenState createState() => _ReminderScreenState();
-}
-
-class _ReminderScreenState extends State<ReminderScreen> {
-  final ApiService _apiService = ApiService();
-  // NotificationService singleton olduğu için bu şekilde de kullanabilirsin
-  final NotificationService _notificationService = NotificationService();
-  List<dynamic> _todos = [];
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadTodos();
-  }
-
-  Future<void> _loadTodos() async {
-    setState(() => _isLoading = true);
-    final todos = await _apiService.getTodos();
-    if (todos != null && mounted) {
-      setState(() {
-        _todos = todos;
-        _isLoading = false;
-      });
-    } else {
-      setState(() => _isLoading = false);
-    }
-  }
+class ReminderScreen extends StatelessWidget {
+  const ReminderScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final TodoController todoController = Get.find<TodoController>();
+
     return Scaffold(
       appBar: AppBar(
-        title: Text("Görev Hatırlatıcı (JWT)"),
-        actions: [IconButton(icon: Icon(Icons.refresh), onPressed: _loadTodos)],
+        title: const Text('Görev Hatırlatıcılar'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () => todoController.fetchTodos(),
+          ),
+        ],
       ),
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator())
-          : _todos.isEmpty
-              ? Center(child: Text("Henüz görev yok veya yükleniyor..."))
-              : ListView.builder(
-                  itemCount: _todos.length,
-                  itemBuilder: (context, index) {
-                    final todo = _todos[index];
-                    return ListTile(
-                      leading: Icon(Icons.today, color: Colors.blueAccent),
-                      title: Text(todo['title'] ?? "Başlıksız Görev"),
-                      subtitle: Text("Durum: ${todo['status'] ?? 'Bekliyor'}"),
-                      trailing: IconButton(
-                        icon: Icon(Icons.alarm_add, color: Colors.orange),
-                        onPressed: () async {
-                          // Dinamik Hatırlatıcı: 10 saniye sonra çalacak
-                          // Gerçek projede buradan bir TimePicker da açabilirsin
-                          final scheduledTime =
-                              DateTime.now().add(Duration(seconds: 10));
+      body: Obx(() {
+        if (todoController.isLoading.value) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-                          await NotificationService.scheduleNotification(
-                            id: todo['id'].hashCode,
-                            title: "🔔 Görev Zamanı Geldi!",
-                            body: "Unutma: ${todo['title']}",
-                            scheduledDate: scheduledTime,
-                          );
+        final todos = todoController.todos;
 
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                  "Bildirim 10 saniye sonrasına kuruldu! 🚀"),
-                              backgroundColor: Colors.green,
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                        },
-                      ),
+        if (todos.isEmpty) {
+          return const Center(child: Text('Henüz görev yok.'));
+        }
+
+        return ListView.builder(
+          itemCount: todos.length,
+          itemBuilder: (context, index) {
+            final todo = todos[index];
+            return ListTile(
+              leading: const Icon(Icons.today, color: Colors.blueAccent),
+              title: Text(todo.title),
+              subtitle: Text(todo.completed ? 'Tamamlandı' : 'Bekliyor'),
+              trailing: IconButton(
+                icon: const Icon(Icons.alarm_add, color: Colors.orange),
+                onPressed: () async {
+                  final TimeOfDay? pickedTime = await showTimePicker(
+                    context: context,
+                    initialTime: TimeOfDay.now(),
+                  );
+
+                  if (pickedTime != null) {
+                    final now = DateTime.now();
+                    var scheduledDate = DateTime(
+                      now.year,
+                      now.month,
+                      now.day,
+                      pickedTime.hour,
+                      pickedTime.minute,
                     );
-                  },
-                ),
+
+                    if (scheduledDate.isBefore(now)) {
+                      scheduledDate =
+                          scheduledDate.add(const Duration(days: 1));
+                    }
+
+                    await NotificationService.scheduleNotification(
+                      id: todo.id.hashCode,
+                      title: '🔔 Görev Zamanı Geldi!',
+                      body: 'Unutma: ${todo.title}',
+                      scheduledDate: scheduledDate,
+                    );
+
+                    Get.snackbar(
+                      'Bildirim Kuruldu',
+                      '${todo.title} için hatırlatıcı kuruldu!',
+                      backgroundColor: Colors.green,
+                      colorText: Colors.white,
+                      snackPosition: SnackPosition.BOTTOM,
+                      margin: const EdgeInsets.all(16),
+                      duration: const Duration(seconds: 2),
+                    );
+                  }
+                },
+              ),
+            );
+          },
+        );
+      }),
     );
   }
 }

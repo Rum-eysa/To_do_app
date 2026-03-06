@@ -5,6 +5,7 @@ import 'dart:convert';
 import '../models/user.dart';
 import '../services/api_service.dart';
 import '../utils/error_handler.dart';
+import 'todo_controller.dart';
 
 class AuthController extends GetxController {
   final fb_auth.FirebaseAuth _auth = fb_auth.FirebaseAuth.instance;
@@ -52,7 +53,6 @@ class AuthController extends GetxController {
     try {
       final String? idToken = await firebaseUser.getIdToken();
       if (idToken == null) return false;
-
       return await _apiService.syncUser(
         uid: firebaseUser.uid,
         email: firebaseUser.email ?? '',
@@ -67,35 +67,28 @@ class AuthController extends GetxController {
   Future<bool> login(String email, String password) async {
     isLoading.value = true;
     error.value = null;
-
     try {
       final userCredential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
-
       final firebaseUser = userCredential.user;
       if (firebaseUser == null) {
         throw Exception('Firebase kullanıcısı alınamadı');
       }
-
       await _syncWithBackend(firebaseUser);
-
       final String? idToken = await firebaseUser.getIdToken();
-
       currentUser.value = User(
         id: firebaseUser.uid,
         email: firebaseUser.email ?? '',
         username: firebaseUser.displayName ?? 'Kullanıcı',
       );
-
       await _saveUserToLocal({
         'id': currentUser.value!.id,
         'email': currentUser.value!.email,
         'username': currentUser.value!.username,
         'token': idToken,
       });
-
       isLoading.value = false;
       return true;
     } catch (e) {
@@ -109,38 +102,31 @@ class AuthController extends GetxController {
   Future<bool> register(String username, String email, String password) async {
     isLoading.value = true;
     error.value = null;
-
     try {
       final userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
-
       final firebaseUser = userCredential.user;
       if (firebaseUser == null) {
         throw Exception('Firebase kullanıcısı alınamadı');
       }
-
       await firebaseUser.updateDisplayName(username);
       await firebaseUser.reload();
-
-      await _syncWithBackend(firebaseUser);
-
-      final String? idToken = await firebaseUser.getIdToken();
-
+      final updatedUser = _auth.currentUser!;
+      await _syncWithBackend(updatedUser);
+      final String? idToken = await updatedUser.getIdToken(true);
       currentUser.value = User(
-        id: firebaseUser.uid,
+        id: updatedUser.uid,
         email: email,
         username: username,
       );
-
       await _saveUserToLocal({
         'id': currentUser.value!.id,
         'email': currentUser.value!.email,
         'username': username,
         'token': idToken,
       });
-
       isLoading.value = false;
       return true;
     } catch (e) {
@@ -152,6 +138,7 @@ class AuthController extends GetxController {
   }
 
   Future<void> logout() async {
+    Get.find<TodoController>().clearTodos();
     await _auth.signOut();
     currentUser.value = null;
     final prefs = await SharedPreferences.getInstance();
